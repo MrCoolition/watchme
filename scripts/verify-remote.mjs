@@ -216,6 +216,8 @@ try {
         await page.getByRole('button', { name: 'Remove', exact: true }).click();
         await page.getByRole('button', { name: 'Remove watch', exact: true }).click();
         await page.getByRole('dialog').waitFor({ state: 'hidden' });
+        // Removal closes its dialog before its queued preference write completes.
+        await page.getByRole('status').filter({ hasText: 'Watch removed from your collection.' }).waitFor();
       }
       if (originalSelection) {
         await page.getByRole('button', { name: originalTab === 'originals' ? 'Originals' : /My creations/, exact: originalTab === 'originals' }).click();
