@@ -224,7 +224,7 @@ try {
           page.getByRole('button', { name: originalSelection, exact: true }).click(),
         ]);
         assert.equal(response.status(), 200);
-        await response.finished();
+        // Server-action response headers follow the write; don't wait on the RSC stream.
         await page.reload({ waitUntil: 'networkidle' });
         await page.getByRole('button', { name: originalSelection, exact: true }).waitFor();
         assert.equal(await page.getByRole('button', { name: originalSelection, exact: true }).getAttribute('aria-pressed'), 'true');
