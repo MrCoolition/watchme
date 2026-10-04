@@ -77,6 +77,7 @@ async function assertCatalog(verifiedPage) {
   await verifiedPage.getByRole('button', { name: 'Saved references 1', exact: true }).click();
   await verifiedPage.getByRole('button', { name: 'View ECG recording app', exact: true }).waitFor();
   await verifiedPage.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await verifiedPage.getByRole('button', { name: 'Collection', exact: true }).first().click();
 }
 
 try {
