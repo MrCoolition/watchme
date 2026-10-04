@@ -30,6 +30,24 @@ let fixtureCreated = false;
 const fixtureName = `Verification ${randomUUID().slice(0, 8)}`;
 let originalSelection;
 let originalTab = 'originals';
+
+async function assertMoonPhase(verifiedPage) {
+  await verifiedPage.waitForFunction(() => {
+    const disc = document.querySelector('.watch-stage [data-moon-disc]');
+    return ['data-moon-phase', 'data-moon-illumination', 'data-moon-name'].every(attribute => Boolean(disc?.getAttribute(attribute)));
+  });
+  const moon = await verifiedPage.locator('.watch-stage [data-moon-disc]').evaluate(disc => ({
+    phase: Number(disc.getAttribute('data-moon-phase')),
+    illumination: Number(disc.getAttribute('data-moon-illumination')),
+    name: disc.getAttribute('data-moon-name'),
+    description: disc.querySelector('desc')?.textContent,
+  }));
+  assert.ok(Number.isFinite(moon.phase) && moon.phase >= 0 && moon.phase < 1, 'Moon phase must be a calculated fraction.');
+  assert.ok(Number.isFinite(moon.illumination) && moon.illumination >= 0 && moon.illumination <= 1, 'Moon illumination must be a calculated fraction.');
+  assert.ok(['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'].includes(moon.name));
+  assert.ok(moon.description?.includes('% illuminated'), 'Moon accessibility description must contain the measured percentage.');
+}
+
 try {
   await page.goto(config.accessUrl || config.url, { waitUntil: 'networkidle', timeout: 60000 });
   await page.getByLabel('YOUR PRIVATE PASSPHRASE', { exact: true }).waitFor({ timeout: 30000 });
@@ -81,14 +99,78 @@ try {
   await page.getByRole('button', { name: 'Reset chronograph', exact: true }).click();
   await page.getByRole('button', { name: 'Eclipse', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.watch-stage svg')?.getAttribute('data-eclipse') === 'true');
+
+  stage = 'verifying independent focus panels';
+  await page.getByRole('button', { name: 'Enter focus mode', exact: true }).first().click();
+  const panelToggle = page.getByRole('button', { name: 'Chronograph panel', exact: true });
+  const digitalToggle = page.getByRole('button', { name: 'Digital time', exact: true });
+  const panel = page.locator('.chronograph-deck.is-immersive');
+  const digitalTime = page.locator('.focus-time');
+  await panel.waitFor({ state: 'visible' });
+  await digitalTime.waitFor({ state: 'visible' });
+  assert.equal(await panelToggle.getAttribute('aria-pressed'), 'true');
+  assert.equal(await digitalToggle.getAttribute('aria-pressed'), 'true');
+  await panelToggle.click();
+  await panel.waitFor({ state: 'hidden' });
+  await digitalTime.waitFor({ state: 'visible' });
+  assert.equal(await panelToggle.getAttribute('aria-pressed'), 'false');
+  await digitalToggle.click();
+  await digitalTime.waitFor({ state: 'hidden' });
+  assert.equal(await digitalToggle.getAttribute('aria-pressed'), 'false');
+  await panelToggle.click();
+  await panel.waitFor({ state: 'visible' });
+  assert.equal(await digitalTime.count(), 0, 'Restoring the timer panel must not restore the digital clock.');
+  await digitalToggle.click();
+  await digitalTime.waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: 'Back to the studio', exact: true }).click();
+  await page.waitForFunction(() => !document.fullscreenElement);
+
+  stage = 'saving and reopening the moon-phase complication';
+  await page.getByRole('button', { name: 'Design studio', exact: true }).first().click();
+  await page.locator('summary').filter({ hasText: 'Strap & function' }).click();
+  await page.getByRole('combobox', { name: 'Complication', exact: true }).selectOption('moonphase');
+  await assertMoonPhase(page);
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  assert.equal(await page.getByLabel('Watch name', { exact: true }).inputValue(), fixtureName);
+  await page.getByRole('button', { name: 'Save watch', exact: true }).click();
+  await page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 30000 });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.getByRole('heading', { name: fixtureName, exact: true }).waitFor();
+  await assertMoonPhase(page);
+  await page.locator('.watch-specs').getByText('Moon phase', { exact: true }).waitFor();
+  assert.equal(await page.locator('.watch-stage [data-chrono-ring]').count(), 0, 'The saved lunar complication must replace the chronograph layout.');
+
   stage = 'verifying a second browser context';
   const second = await browser.newContext({ timezoneId: 'America/New_York' });
-  await second.addCookies(await context.cookies());
-  const secondPage = await second.newPage();
-  await secondPage.goto(config.url, { waitUntil: 'networkidle' });
-  await secondPage.getByRole('heading', { name: fixtureName, exact: true }).waitFor();
-  await secondPage.getByRole('button', { name: 'Favorited', exact: true }).waitFor();
-  await second.close();
+  try {
+    await second.addCookies(await context.cookies());
+    const secondPage = await second.newPage();
+    secondPage.on('pageerror', error => runtimeErrors.push(error.message));
+    await secondPage.goto(config.url, { waitUntil: 'networkidle' });
+    await secondPage.getByRole('heading', { name: fixtureName, exact: true }).waitFor();
+    await secondPage.getByRole('button', { name: 'Favorited', exact: true }).waitFor();
+    await secondPage.locator('.watch-specs').getByText('Moon phase', { exact: true }).waitFor();
+    await assertMoonPhase(secondPage);
+    assert.ok(await secondPage.locator('.watch-stage svg').getByText('NIGHT SHIFT', { exact: true }).count());
+    stage = 'exporting the persisted lunar edition';
+    await secondPage.getByRole('button', { name: 'Download edition card', exact: true }).click();
+    const edition = secondPage.getByRole('dialog', { name: 'Your edition card', exact: true });
+    const [download] = await Promise.all([
+      secondPage.waitForEvent('download'),
+      edition.getByRole('button', { name: 'Download PNG', exact: true }).click(),
+    ]);
+    assert.match(download.suggestedFilename(), /^watchme-verification-[a-f0-9]{8}-[a-f0-9]{8}\.png$/);
+    const stream = await download.createReadStream();
+    assert.ok(stream);
+    const chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    const bytes = Buffer.concat(chunks);
+    assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(bytes.readUInt32BE(16), 1080);
+    assert.equal(bytes.readUInt32BE(20), 1350);
+    assert.ok(bytes.length > 50000, 'The exported edition should contain the rendered watch.');
+    await download.saveAs(`.setup/${config.schema}-moon-edition.png`);
+  } finally { await second.close(); }
   stage = 'verifying live weather';
   const weather = await context.request.get(`${config.url}/api/weather?lat=40.7&lon=-74&unit=fahrenheit`);
   assert.equal(weather.status(), 200);
@@ -107,25 +189,37 @@ try {
   await page.getByRole('button', { name: 'Back to the studio', exact: true }).click();
   await page.waitForFunction(() => !document.fullscreenElement);
   assert.deepEqual(runtimeErrors, [], 'The deployed page produced a runtime error.');
-  console.log(`PASS: ${config.schema} deployed session, private APIs, REACTOR engraving, real chronograph controls, Eclipse, Neon save/reload/favorite, second-browser persistence, live weather, focus, and mobile face-first layout.`);
+  console.log(`PASS: ${config.schema} deployed session, private APIs, REACTOR engraving, real chronograph controls, Eclipse, independent focus panels, lunar save/reload/favorite, second-browser moon persistence and PNG export, live weather, focus, and mobile face-first layout.`);
 } catch (error) {
   console.error(`Remote verification failed while ${stage}. Credentials and private URLs omitted.`);
   console.error(String(error?.message || error).replace(/https?:\/\/\S+/g, '[private URL omitted]').slice(0, 2200));
   process.exitCode = 1;
 } finally {
-  if (fixtureCreated) {
+  if (fixtureCreated || originalSelection) {
     try {
       await page.evaluate(async () => { if (document.fullscreenElement) await document.exitFullscreen(); });
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto(config.url, { waitUntil: 'networkidle' });
-      await page.getByRole('button', { name: /My creations/ }).click();
-      await page.getByRole('button', { name: `Select ${fixtureName}`, exact: true }).click();
-      await page.getByRole('button', { name: 'Remove', exact: true }).click();
-      await page.getByRole('button', { name: 'Remove watch', exact: true }).click();
-      await page.getByRole('dialog').waitFor({ state: 'hidden' });
-      await page.getByRole('button', { name: originalTab === 'originals' ? 'Originals' : /My creations/, exact: originalTab === 'originals' }).click();
-      if (originalSelection) await page.getByRole('button', { name: originalSelection, exact: true }).click();
-      console.log('Verification watch removed and original selection restored.');
+      if (fixtureCreated) {
+        await page.getByRole('button', { name: /My creations/ }).click();
+        await page.getByRole('button', { name: `Select ${fixtureName}`, exact: true }).click();
+        await page.getByRole('button', { name: 'Remove', exact: true }).click();
+        await page.getByRole('button', { name: 'Remove watch', exact: true }).click();
+        await page.getByRole('dialog').waitFor({ state: 'hidden' });
+      }
+      if (originalSelection) {
+        await page.getByRole('button', { name: originalTab === 'originals' ? 'Originals' : /My creations/, exact: originalTab === 'originals' }).click();
+        const [response] = await Promise.all([
+          page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).origin === target.origin && Boolean(response.request().headers()['next-action'])),
+          page.getByRole('button', { name: originalSelection, exact: true }).click(),
+        ]);
+        assert.equal(response.status(), 200);
+        await response.finished();
+        await page.reload({ waitUntil: 'networkidle' });
+        await page.getByRole('button', { name: originalSelection, exact: true }).waitFor();
+        assert.equal(await page.getByRole('button', { name: originalSelection, exact: true }).getAttribute('aria-pressed'), 'true');
+      }
+      console.log('Verification cleanup complete; original selection restored.');
     } catch { console.error('Verification watch cleanup needs attention.'); process.exitCode = 1; }
   }
   await browser.close();

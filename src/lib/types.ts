@@ -7,7 +7,7 @@ export type SecondsMotion = "sweep" | "tick";
 export type Hands = "baton" | "sword" | "dauphine" | "skeleton";
 export type Markers = "baton" | "roman" | "arabic" | "minimal";
 export type Strap = "bracelet" | "leather" | "rubber";
-export type Complication = "date" | "gmt" | "chronograph" | "weather" | "regulator" | "daynight" | "none";
+export type Complication = "date" | "gmt" | "chronograph" | "weather" | "regulator" | "daynight" | "moonphase" | "none";
 export interface WatchDesign {
   version: 1;
   family: WatchFamily;

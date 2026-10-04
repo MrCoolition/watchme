@@ -16,6 +16,12 @@ Five flagships join REACTOR, each with its own layered dial artwork and function
 
 Use the Black Label collection filter to find all six flagships. Each supports Eclipse, interactive lighting, engraving, saved personal editions, and PNG edition cards. New textures are also available in the design studio. NOCTURNE's display follows civil time (day from 06:00 to 18:00); it does not estimate sunrise, sunset, or lunar phase.
 
+## Moon phase and focus controls
+
+Choose **Design studio → Strap & function → Complication → Moon phase** to add a live lunar aperture to any watch. It shows the illuminated lunar disc, phase name, and illumination percentage. [Astronomy Engine](https://github.com/cosinekitty/astronomy/tree/master/source/js#MoonPhase) computes the phase locally from the current UTC instant; no location or external API is required. The disc uses a conventional north-up presentation. Calculations are checked against [US Naval Observatory phase times](https://aa.usno.navy.mil/calculated/moon/phases?year=2026). This is separate from NOCTURNE's civil-time day/night indicator.
+
+In **Front & center**, **Digital time** controls the clock/date display and **Chronograph panel** independently controls the stopwatch panel. Hiding the panel leaves the stopwatch running and the case pushers working. The face expands into the freed space. Both choices are remembered on the current device.
+
 ## BLACK LABEL / REACTOR
 
 REACTOR introduces an open mechanical dial with moving gears and a balance wheel, ceramic architecture, and electric mint accents. Drag across the watch to move its reflections, or focus the watch and use arrow keys; Home resets the light. Eclipse turns the dial into a luminous night display. Decorative motion respects reduced-motion and visibility preferences.

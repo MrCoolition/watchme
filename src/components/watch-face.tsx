@@ -6,6 +6,8 @@ import type { WatchDesign, WeatherData } from "@/lib/types";
 import { getClockParts, getDayNightState, getHandAngles } from "@/lib/time";
 import { MechanicalMovement } from "@/components/mechanical-movement";
 import { FlagshipDialArtwork } from "@/components/flagship-dials";
+import { getMoonPhase } from "@/lib/moon";
+import { getMoonTerminatorPath, MoonPhaseDial } from "@/components/moon-phase-dial";
 
 export interface WatchFaceProps {
   design: WatchDesign;
@@ -78,6 +80,11 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
   const dateRef = useRef<SVGTextElement>(null);
   const dayNightDiscRef = useRef<SVGGElement>(null);
   const dayNightLabelRef = useRef<SVGTextElement>(null);
+  const moonDiscRef = useRef<SVGGElement>(null);
+  const moonTerminatorRef = useRef<SVGPathElement>(null);
+  const moonNameRef = useRef<SVGTextElement>(null);
+  const moonIlluminationRef = useRef<SVGTextElement>(null);
+  const moonDescriptionRef = useRef<SVGDescElement>(null);
   const accessibleTimeRef = useRef<SVGDescElement>(null);
   const chronoRingRef = useRef<SVGCircleElement>(null);
   const elapsedRef = useRef(chronographElapsed);
@@ -92,6 +99,8 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
     let timer: ReturnType<typeof setTimeout> | undefined;
     let lastFrame = 0;
     let calendarSecond = -1;
+    let moonMinute = -1;
+    let lunarDescription = "";
     let primary = getClockParts(Date.now(), timezone);
     let secondary = getClockParts(Date.now(), secondaryTimezone);
     const gears = Array.from(node.querySelectorAll<SVGGElement>("[data-mechanical-gear], [data-flagship-rotor], [data-flagship-kinetic]")).map(gear => ({ node: gear, x: Number(gear.dataset.centerX), y: Number(gear.dataset.centerY), period: Number(gear.dataset.period), direction: Number(gear.dataset.direction), phase: Number(gear.dataset.phase) }));
@@ -111,7 +120,22 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
           dayNightDiscRef.current.setAttribute("data-daynight-state", phase.isDay ? "day" : "night");
           if (dayNightLabelRef.current) dayNightLabelRef.current.textContent = phase.isDay ? "DAY · 24H" : "NIGHT · 24H";
         }
-        if (accessibleTimeRef.current) accessibleTimeRef.current.textContent = `${String(primary.hour).padStart(2, "0")}:${String(primary.minute).padStart(2, "0")}:${String(primary.second).padStart(2, "0")} ${timezone || "local time"}`;
+        if (accessibleTimeRef.current) accessibleTimeRef.current.textContent = `${String(primary.hour).padStart(2, "0")}:${String(primary.minute).padStart(2, "0")}:${String(primary.second).padStart(2, "0")} ${timezone || "local time"}${lunarDescription ? `. ${lunarDescription}` : ""}`;
+      }
+      if (design.complication === "moonphase" && Math.floor(now / 60000) !== moonMinute) {
+        moonMinute = Math.floor(now / 60000);
+        const moon = getMoonPhase(now);
+        const percent = Number((moon.illumination * 100).toFixed(1));
+        lunarDescription = `${moon.name}, ${percent}% illuminated.`;
+        moonDiscRef.current?.setAttribute("data-moon-phase", String(moon.phase));
+        moonDiscRef.current?.setAttribute("data-moon-illumination", String(moon.illumination));
+        moonDiscRef.current?.setAttribute("data-moon-name", moon.name);
+        moonDiscRef.current?.setAttribute("aria-label", lunarDescription);
+        moonTerminatorRef.current?.setAttribute("d", getMoonTerminatorPath(moon.illumination, moon.waxing));
+        if (moonNameRef.current) moonNameRef.current.textContent = moon.name.toUpperCase();
+        if (moonIlluminationRef.current) moonIlluminationRef.current.textContent = `${percent}% ILLUMINATED`;
+        if (moonDescriptionRef.current) moonDescriptionRef.current.textContent = lunarDescription;
+        if (accessibleTimeRef.current) accessibleTimeRef.current.textContent = `${String(primary.hour).padStart(2, "0")}:${String(primary.minute).padStart(2, "0")}:${String(primary.second).padStart(2, "0")} ${timezone || "local time"}. ${lunarDescription}`;
       }
       const millis = live && !reduced.matches && design.secondsMotion !== "tick" ? now % 1000 : 0;
       const angles = getHandAngles({ ...primary, millisecond: millis });
@@ -173,6 +197,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
   const chrono = design.complication === "chronograph";
   const regulator = design.complication === "regulator";
   const dayNight = design.complication === "daynight";
+  const moonPhase = design.complication === "moonphase";
   const gmt = design.complication === "gmt";
   const smallSeconds = design.family === "vesper" && design.complication === "none";
   const outline = casePath(design.caseShape);
@@ -332,6 +357,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       {[...Array(12)].map((_, i) => {
         if (design.complication === "date" && i === (design.family === "pelagic" ? 6 : 3)) return null;
         if (chrono && i === 6) return null;
+        if (moonPhase && i === 6) return null;
         if (signature && (regulator || smallSeconds || dayNight || design.complication === "weather") && i === 6) return null;
         const angle = i * 30;
         const a = angle * Math.PI / 180;
@@ -355,8 +381,8 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       <path d={chrono ? "M307 235L314 244L320 233L326 244L333 235" : "M307 266L314 275L320 264L326 275L333 266"} fill="none" stroke={ink} strokeWidth="1.4" />
       <text x="321" y={chrono ? 263 : 296} fontSize={design.family === "vesper" ? "15" : "14"} fontWeight="500" letterSpacing="4.5">WATCHMÉ</text>
       {!chrono && <text x="320" y="314" fontSize="6.5" letterSpacing="2.5" fill={mutedInk}>PRIVATE ATELIER</text>}
-      {!chrono && !smallSeconds && <text x="320" y={dayNight ? "394" : "413"} fontSize={dayNight ? "8" : "10"} letterSpacing={dayNight ? "2.5" : "3"} fill={mutedInk}>{design.family.toUpperCase()}</text>}
-      {!chrono && !smallSeconds && !dayNight && design.complication !== "weather" && <text x="320" y="431" fontSize={signature ? "8" : "6"} letterSpacing={signature ? "1.8" : "1.6"} fill={signature ? ink : mutedInk}>{signature || (gmt ? "TWO PLACES. ONE MOMENT." : "YOUR TIME. YOUR RULES.")}</text>}
+      {!chrono && !smallSeconds && <text x="320" y={dayNight || moonPhase ? "394" : "413"} fontSize={dayNight || moonPhase ? "8" : "10"} letterSpacing={dayNight || moonPhase ? "2.5" : "3"} fill={moonPhase && signature ? ink : mutedInk}>{moonPhase && signature ? signature : design.family.toUpperCase()}</text>}
+      {!chrono && !smallSeconds && !dayNight && !moonPhase && design.complication !== "weather" && <text x="320" y="431" fontSize={signature ? "8" : "6"} letterSpacing={signature ? "1.8" : "1.6"} fill={signature ? ink : mutedInk}>{signature || (gmt ? "TWO PLACES. ONE MOMENT." : "YOUR TIME. YOUR RULES.")}</text>}
       {chrono && <text x="320" y="502" fontSize={signature ? "8" : "7"} letterSpacing={signature ? "1.8" : "2.4"} fill={design.accentColor}>{signature || `${design.family.toUpperCase()} · CHRONOGRAPH`}</text>}
     </g>}
     {regulator && design.texture === "solar" && <g opacity={illuminated ? ".8" : "1"}>
@@ -398,6 +424,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       <path d="M270 440Q320 454 370 440" fill="none" stroke={metal.light} strokeOpacity=".55" strokeWidth=".6" />
       <text ref={dayNightLabelRef} data-daynight-label="true" x="320" y="471" textAnchor="middle" fill={ink} fontSize="8" letterSpacing="2">24H</text>
     </g>}
+    {moonPhase && <MoonPhaseDial id={id} fill={fill} ink={ink} mutedInk={mutedInk} lumeColor={lumeColor} illuminated={illuminated} eclipse={eclipse} discRef={moonDiscRef} terminatorRef={moonTerminatorRef} nameRef={moonNameRef} illuminationRef={moonIlluminationRef} descriptionRef={moonDescriptionRef} />}
     <text x="320" y={signature && (regulator || smallSeconds || dayNight || design.complication === "weather") ? "500" : "511"} fill={signature ? ink : mutedInk} textAnchor="middle" fontSize={signature && (regulator || smallSeconds || dayNight || design.complication === "weather") ? "8" : "5"} letterSpacing="1.4" opacity={signature ? "1" : ".75"}>{chrono ? "" : signature && (regulator || smallSeconds || dayNight || design.complication === "weather") ? signature : "WATCHMÉ • DESIGNED FOR YOU"}</text>
 
     {(chrono || regulator || smallSeconds) && <g fill={design.accentColor}>

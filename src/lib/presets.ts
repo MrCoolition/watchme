@@ -16,7 +16,7 @@ export const PARTS = {
   hands: ["baton", "sword", "dauphine", "skeleton"],
   markers: ["baton", "roman", "arabic", "minimal"],
   straps: ["bracelet", "leather", "rubber"],
-  complications: ["date", "gmt", "chronograph", "weather", "regulator", "daynight", "none"],
+  complications: ["date", "gmt", "chronograph", "weather", "regulator", "daynight", "moonphase", "none"],
 } as const;
 
 export const PRESETS: WatchPreset[] = [
