@@ -67,17 +67,20 @@ try {
   stage = 'verifying focus and phone rendering';
   await page.getByRole('button', { name: 'Enter focus mode', exact: true }).first().click();
   await page.getByRole('button', { name: 'Back to the studio', exact: true }).click();
+  await page.waitForFunction(() => !document.fullscreenElement);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.screenshot({ path: `.setup/${config.schema}-mobile.png`, fullPage: true });
   assert.deepEqual(runtimeErrors, [], 'The deployed page produced a runtime error.');
   console.log(`PASS: ${config.schema} deployed session, unauthorized API rejection, customization, Neon save/reload/favorite, second-browser persistence, live weather, focus, and mobile layout.`);
-} catch {
+} catch (error) {
   console.error(`Remote verification failed while ${stage}. Credentials and private URLs omitted.`);
+  console.error(String(error?.message || error).replace(/https?:\/\/\S+/g, '[private URL omitted]').slice(0, 2200));
   process.exitCode = 1;
 } finally {
   if (fixtureCreated) {
     try {
+      await page.evaluate(async () => { if (document.fullscreenElement) await document.exitFullscreen(); });
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto(config.url, { waitUntil: 'networkidle' });
       await page.getByRole('button', { name: /My creations/ }).click();
