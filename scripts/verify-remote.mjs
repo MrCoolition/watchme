@@ -16,6 +16,12 @@ const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
 const page = await context.newPage();
 const runtimeErrors = [];
+let loginPassphrase;
+if (process.argv.includes('--login-base64-stdin')) {
+  let encoded = '';
+  for await (const chunk of process.stdin) encoded += chunk.toString();
+  loginPassphrase = Buffer.from(encoded.trim(), 'base64').toString('utf8');
+}
 page.on('pageerror', error => runtimeErrors.push(error.message));
 let stage = 'opening protected deployment';
 let fixtureCreated = false;
@@ -28,7 +34,15 @@ try {
   stage = 'checking private API boundary';
   assert.equal((await context.request.get(`${config.url}/api/weather?lat=40.7&lon=-74&unit=fahrenheit`)).status(), 401);
   assert.equal((await context.request.get(`${config.url}/api/locations?q=London`)).status(), 401);
-  await context.addCookies([{ name: `watchme_${config.schema}_session`, value: session, domain: target.hostname, path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
+  if (loginPassphrase) {
+    stage = 'logging in with the configured passphrase';
+    await page.getByLabel('YOUR PRIVATE PASSPHRASE', { exact: true }).fill(loginPassphrase);
+    await page.getByRole('button', { name: 'Enter the studio', exact: true }).click();
+    await page.locator('.watch-story h1').waitFor({ timeout: 30000 });
+    loginPassphrase = undefined;
+  } else {
+    await context.addCookies([{ name: `watchme_${config.schema}_session`, value: session, domain: target.hostname, path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }]);
+  }
   stage = 'opening authenticated studio';
   await page.goto(config.url, { waitUntil: 'networkidle' });
   await page.locator('.watch-story h1').waitFor({ timeout: 30000 });

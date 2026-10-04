@@ -62,11 +62,29 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
   const [lume, setLume] = useState(false); const [focus, setFocus] = useState(false); const [keepAwake, setKeepAwake] = useState(false); const [mobileInspector, setMobileInspector] = useState(false);
   const [modal, setModal] = useState<Modal>(null); const [name, setName] = useState(""); const [busy, setBusy] = useState(false); const [toast, setToast] = useState<{ message: string; error?: boolean } | null>(null); const [ready, setReady] = useState(false);
   const preferenceRef = useRef(preferences); const initialRef = useRef(initial); const preferencesQueue = useRef<Promise<unknown>>(Promise.resolve()); const inspectorRef = useRef<HTMLElement>(null);
+  const focusIntent = useRef(false); const fullscreenRequest = useRef<Promise<void> | null>(null); const fullscreenExit = useRef<Promise<void> | null>(null);
   const timers = useTimers(); const weather = useWeather(preferences.location, preferences.unit); const wakeLock = useWakeLock(focus && keepAwake);
   const selected = watches.find(watch => watch.id === activeId) || PRESETS.find(preset => preset.id === activeId) || PRESETS[0];
   const preset = PRESETS.find(item => item.id === selected.design.family) || PRESETS[0]; const design = history[historyIndex];
   const dirty = JSON.stringify(design) !== JSON.stringify(selected.design); const isSaved = !('edition' in selected);
   const notify = useCallback((message: string, error = false) => setToast({ message, error }), []);
+  const leaveBrowserFullscreen = useCallback(async () => {
+    if (fullscreenExit.current) return fullscreenExit.current;
+    if (!document.fullscreenElement) return;
+    const operation = document.exitFullscreen().catch(() => {
+      if (document.fullscreenElement) notify("Your browser kept full screen open. Press Escape to leave it.", true);
+    });
+    fullscreenExit.current = operation;
+    try { await operation; } finally { if (fullscreenExit.current === operation) fullscreenExit.current = null; }
+  }, [notify]);
+  const exitFocus = useCallback(async () => {
+    focusIntent.current = false; setFocus(false);
+    // A fullscreen request can complete after the focus controls become clickable.
+    // Exit both an existing fullscreen session and any late completion of that request.
+    await leaveBrowserFullscreen();
+    try { await fullscreenRequest.current; } catch { /* Rejected fullscreen already uses the in-page fallback. */ }
+    if (!focusIntent.current) await leaveBrowserFullscreen();
+  }, [leaveBrowserFullscreen]);
   const persistPreferences = useCallback(async (next: Preferences, reportSuccess = false) => {
     preferenceRef.current = next; setPreferencesState(next);
     const operation = preferencesQueue.current.then(async () => { try { const result = await savePreferences(next); if (!result.ok) { notify(result.error, true); return false; } if (reportSuccess) notify("Preferences saved."); return true; } catch { notify("Couldn’t sync preferences. Please try again.", true); return false; } });
@@ -103,7 +121,15 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
     sync(); media.addEventListener("change", sync); document.addEventListener("keydown", trap);
     return () => { background.forEach(element => { element.inert = false; }); document.body.style.overflow = previousOverflow; panel.removeAttribute("role"); panel.removeAttribute("aria-modal"); media.removeEventListener("change", sync); document.removeEventListener("keydown", trap); if (media.matches) opener?.focus(); };
   }, [mobileInspector]);
-  useEffect(() => { const exit = () => { if (!document.fullscreenElement) setFocus(false); }; document.addEventListener("fullscreenchange", exit); const key = (event: KeyboardEvent) => { if (event.key === "Escape" && !document.querySelector("dialog[open]")) { setFocus(false); setMobileInspector(false); } }; document.addEventListener("keydown", key); return () => { document.removeEventListener("fullscreenchange", exit); document.removeEventListener("keydown", key); }; }, []);
+  useEffect(() => {
+    const syncFullscreen = () => {
+      if (document.fullscreenElement) { if (!focusIntent.current) void leaveBrowserFullscreen(); }
+      else if (!fullscreenRequest.current) { focusIntent.current = false; setFocus(false); }
+    };
+    const key = (event: KeyboardEvent) => { if (event.key === "Escape" && !document.querySelector("dialog[open]")) { void exitFocus(); setMobileInspector(false); } };
+    document.addEventListener("fullscreenchange", syncFullscreen); document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("fullscreenchange", syncFullscreen); document.removeEventListener("keydown", key); };
+  }, [exitFocus, leaveBrowserFullscreen]);
   const selectWatch = useCallback((id: string) => {
     const item = watches.find(watch => watch.id === id) || PRESETS.find(watch => watch.id === id); if (!item) return;
     const restored = readDraft(id, item.design); setActiveId(id); setHistory(JSON.stringify(restored) !== JSON.stringify(item.design) ? [item.design, restored] : [item.design]); setHistoryIndex(JSON.stringify(restored) !== JSON.stringify(item.design) ? 1 : 0);
@@ -126,8 +152,14 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
   }
   async function duplicate() { if (busy) return; setBusy(true); try { const result = await saveWatch({ name: `${selected.name} II`, design }); if (!result.ok) { notify(result.error, true); return; } setWatches(current => [result.data, ...current]); setActiveId(result.data.id); setHistory([result.data.design]); setHistoryIndex(0); setCollectionTab("saved"); setFavoritesOnly(false); await persistPreferences({ ...preferenceRef.current, activeWatchId: result.data.id }); notify("A fresh canvas. Make this one yours."); } catch { notify("Couldn’t duplicate this watch. Please try again.", true); } finally { setBusy(false); } }
   async function removeCurrent() { if (!isSaved) return; setBusy(true); try { const result = await deleteWatch(selected.id); if (!result.ok) { notify(result.error, true); return; } setWatches(current => current.filter(watch => watch.id !== selected.id)); try { localStorage.removeItem(draftKey(selected.id)); } catch {} setActiveId(PRESETS[0].id); setHistory([PRESETS[0].design]); setHistoryIndex(0); setModal(null); await persistPreferences({ ...preferenceRef.current, activeWatchId: PRESETS[0].id }); notify("Watch removed from your collection."); } catch { notify("Couldn’t remove this watch. Please try again.", true); } finally { setBusy(false); } }
-  async function enterFocus() { setFocus(true); setMobileInspector(false); try { if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); } catch { /* The in-page focus layout provides the same uncluttered view. */ } }
-  async function exitFocus() { setFocus(false); if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch { /* In-page focus is already closed. */ } } }
+  async function enterFocus() {
+    focusIntent.current = true; setFocus(true); setMobileInspector(false);
+    if (!document.documentElement.requestFullscreen || document.fullscreenElement || fullscreenRequest.current) return;
+    const request = document.documentElement.requestFullscreen(); fullscreenRequest.current = request;
+    try { await request; } catch { /* The in-page focus layout provides the same uncluttered view. */ }
+    finally { if (fullscreenRequest.current === request) fullscreenRequest.current = null; }
+    if (!focusIntent.current) await leaveBrowserFullscreen();
+  }
   const isFavorite = (id: string) => watches.find(watch => watch.id === id)?.favorite || preferences.favoritePresets.includes(id);
   const collection = (collectionTab === "originals" ? PRESETS : watches).filter(item => !favoritesOnly || isFavorite(item.id));
   const activeIndex = PRESETS.findIndex(item => item.id === design.family) + 1;
