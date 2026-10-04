@@ -25,6 +25,8 @@ let lastPreferences;
 let processOutput = "";
 let passed = false;
 let failureStage = "starting the isolated Next.js server";
+const runtimeErrors = [];
+const safeDiagnostic = value => String(value).replaceAll(passphrase, "[test credential]").replaceAll(sessionSecret, "[session secret]").replaceAll(hash, "[password hash]").replaceAll(process.env.neon_connect, "[database connection]").slice(0, 3000);
 const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "dev", "--hostname", "127.0.0.1", "--port", "3001"], {
   windowsHide: true,
   env: { ...process.env, WATCHME_SCHEMA: "watchme_dev", WATCHME_PASSWORD_HASH: hash, SESSION_SECRET: sessionSecret, VERCEL: "", VERCEL_ENV: "", NODE_ENV: "development", NEXT_TELEMETRY_DISABLED: "1" },
@@ -43,7 +45,6 @@ try {
   browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, timezoneId: "America/New_York" });
   const page = await context.newPage();
-  const runtimeErrors = [];
   page.on("pageerror", error => runtimeErrors.push(error.message));
   failureStage = "checking unauthenticated routes";
   for (const route of ["/api/weather?lat=40&lon=-74", "/api/locations?q=London"]) {
@@ -107,20 +108,32 @@ try {
   assert.equal(observation.ok, true);
   assert.ok(Number.isFinite(observation.data.temperature));
   failureStage = "locking the studio and checking session removal";
-  await page.getByRole("button", { name: "Lock the studio", exact: true }).click();
+  // Keyboard activation avoids the Next.js development indicator overlapping the bottom-left rail button.
+  await page.getByRole("button", { name: "Lock the studio", exact: true }).press("Enter");
+  failureStage = "waiting for logout to return to the private entrance";
   await page.waitForURL("**/login");
+  failureStage = "verifying the logged-out API session is invalid";
   assert.equal((await context.request.get(`${base}/api/weather?lat=40&lon=-74`)).status(), 401);
+  failureStage = "checking browser runtime errors";
   assert.equal(runtimeErrors.length, 0);
   passed = true;
-} catch {
+} catch (error) {
   // Keep Playwright action logs and server diagnostic contents out of output: they may contain temporary credentials.
   console.error(`Real browser verification failed while ${failureStage}.`);
+  console.error(safeDiagnostic(error instanceof Error ? error.message : "Unknown verification error."));
+  for (const error of runtimeErrors) console.error(`Browser: ${safeDiagnostic(error)}`);
   console.error(`Server reported an error: ${/Error:|error/i.test(processOutput) ? "yes" : "no"}. Detailed logs were not printed.`);
   process.exitCode = 1;
 } finally {
+  await browser?.close();
+  // On Windows, terminate the known child process tree so the Next.js worker cannot leave port 3001 occupied.
+  if (server.pid && server.exitCode === null) {
+    if (process.platform === "win32") {
+      await new Promise(resolve => { const stop = spawn("taskkill", ["/pid", String(server.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" }); stop.on("exit", resolve); });
+    } else server.kill("SIGTERM");
+  }
   const current = await sql`SELECT value FROM watchme_dev.preferences WHERE id = 1`;
   lastPreferences = current[0]?.value;
-  await browser?.close();
   // Restore the original singleton only if no other writer changed it after the last observed test state.
   if (lastPreferences) {
     if (before[0]) await sql`UPDATE watchme_dev.preferences SET value = ${JSON.stringify(before[0].value)}::jsonb, updated_at = ${before[0].updated_at} WHERE id = 1 AND value = ${JSON.stringify(lastPreferences)}::jsonb`;
@@ -128,11 +141,5 @@ try {
   }
   await sql`DELETE FROM watchme_dev.watches WHERE name = ${name}`;
   await sql`DELETE FROM watchme_dev.login_attempts WHERE bucket = ${bucket}`;
-  // On Windows, terminate the known child process tree so the Next.js worker cannot leave port 3001 occupied.
-  if (server.pid && server.exitCode === null) {
-    if (process.platform === "win32") {
-      await new Promise(resolve => { const stop = spawn("taskkill", ["/pid", String(server.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" }); stop.on("exit", resolve); });
-    } else server.kill("SIGTERM");
-  }
   if (passed) console.log("PASS: real login, wrong-passphrase rejection, encrypted HTTP-only session, Neon save/reload/favorite, second-browser persistence, live weather/location routes, logout and unauthorized endpoints. Development fixtures removed, preferences restored, port 3001 stopped.");
 }

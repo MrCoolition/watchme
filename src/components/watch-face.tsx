@@ -154,7 +154,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
   </g>;
 
   return <svg ref={rootRef} viewBox="0 0 640 720" className={className} role="img" aria-labelledby={`${id("title")} ${id("time")}`} style={{ overflow: "visible", width: "100%", height: "100%", maxHeight: "100%", display: "block", "--watch-accent": design.accentColor } as CSSProperties}>
-    <title id={id("title")}>Watchme {design.family} — {design.metal} {design.caseShape} watch</title>
+    <title id={id("title")}>{`Watchme ${design.family} — ${design.metal} ${design.caseShape} watch`}</title>
     <desc id={id("time")} ref={accessibleTimeRef}>Live watch showing your selected time zone.</desc>
     <defs>
       <linearGradient id={id("metal")} x1="0" y1="0" x2=".9" y2="1" gradientUnits="objectBoundingBox"><stop stopColor={metal.light} /><stop offset=".12" stopColor={metal.mid} /><stop offset=".30" stopColor={metal.dark} /><stop offset=".45" stopColor={metal.light} /><stop offset=".51" stopColor={metal.mid} /><stop offset=".68" stopColor={metal.deep} /><stop offset=".86" stopColor={metal.mid} /><stop offset="1" stopColor={metal.light} /></linearGradient>
