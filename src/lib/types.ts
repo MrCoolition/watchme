@@ -1,7 +1,9 @@
 export type WatchFamily = "monolith" | "pelagic" | "apex" | "vesper" | "meridian" | "orbit";
 export type CaseShape = "octagonal" | "cushion" | "tonneau" | "round";
-export type Metal = "steel" | "titanium" | "gold" | "rose" | "graphite";
-export type DialTexture = "grid" | "horizontal" | "sunburst" | "lacquer" | "skeleton";
+export type Metal = "steel" | "titanium" | "gold" | "rose" | "graphite" | "ceramic";
+export type DialTexture = "grid" | "horizontal" | "sunburst" | "lacquer" | "skeleton" | "carbon" | "meteorite" | "guilloche";
+export type Bezel = "polished" | "fluted" | "iced" | "ceramic";
+export type SecondsMotion = "sweep" | "tick";
 export type Hands = "baton" | "sword" | "dauphine" | "skeleton";
 export type Markers = "baton" | "roman" | "arabic" | "minimal";
 export type Strap = "bracelet" | "leather" | "rubber";
@@ -18,6 +20,10 @@ export interface WatchDesign {
   strap: Strap;
   accentColor: string;
   complication: Complication;
+  bezel?: Bezel;
+  lumeColor?: string;
+  signature?: string;
+  secondsMotion?: SecondsMotion;
 }
 export interface WatchPreset { id: WatchFamily; name: string; edition: string; description: string; category: string; design: WatchDesign; }
 export interface SavedWatch { id: string; name: string; design: WatchDesign; favorite: boolean; createdAt: string; updatedAt: string; }

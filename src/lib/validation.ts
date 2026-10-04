@@ -1,18 +1,22 @@
 import { z } from "zod";
-import { isCompatibleDesign } from "./presets";
+import { isCompatibleDesign, isValidSignature, PARTS } from "./presets";
 
 export const familySchema = z.enum(["monolith", "pelagic", "apex", "vesper", "meridian", "orbit"]);
 const colorSchema = z.string().regex(/^#[a-f0-9]{6}$/i);
 export const designSchema = z.object({
   version: z.literal(1), family: familySchema,
-  caseShape: z.enum(["octagonal", "cushion", "tonneau", "round"]),
-  metal: z.enum(["steel", "titanium", "gold", "rose", "graphite"]),
+  caseShape: z.enum(PARTS.caseShapes),
+  metal: z.enum(PARTS.metals),
   dialColor: colorSchema, accentColor: colorSchema,
-  texture: z.enum(["grid", "horizontal", "sunburst", "lacquer", "skeleton"]),
-  hands: z.enum(["baton", "sword", "dauphine", "skeleton"]),
-  markers: z.enum(["baton", "roman", "arabic", "minimal"]),
-  strap: z.enum(["bracelet", "leather", "rubber"]),
-  complication: z.enum(["date", "gmt", "chronograph", "weather", "regulator", "none"]),
+  texture: z.enum(PARTS.textures),
+  hands: z.enum(PARTS.hands),
+  markers: z.enum(PARTS.markers),
+  strap: z.enum(PARTS.straps),
+  complication: z.enum(PARTS.complications),
+  bezel: z.enum(PARTS.bezels).optional(),
+  lumeColor: colorSchema.optional(),
+  signature: z.string().refine(isValidSignature, "Use up to 14 visible characters for your signature.").optional(),
+  secondsMotion: z.enum(PARTS.secondsMotions).optional(),
 }).strict().refine(isCompatibleDesign, "The selected complication does not fit this case.");
 export const watchInputSchema = z.object({ id: z.uuid().optional(), name: z.string().trim().min(1).max(60), design: designSchema }).strict();
 const timezoneSchema = z.string().max(100).refine((value) => {

@@ -1,6 +1,14 @@
-# Watchme
+# WATCHMÉ
 
 A private, dial-first watch collection and design studio. Six original live watches, curated customization, saved collections, chronograph, countdown, dual time, weather, and a distraction-free display.
+
+## Front & center and the Atelier
+
+Phones open with the watch face enlarged and the bracelet removed. **Front & center** opens an immersive display with an optional edge-to-edge dial, large digital time/date, watch switching, lume, and opt-in keep-awake. **Face only / Full watch** controls the regular preview; display choices are remembered on the current device, separately from saved watch designs.
+
+The Atelier offers six one-tap looks: After Hours, Icebreaker, Solar Flare, Royal Velvet, Deep Space, and Stealth. Each can be refined with polished, fluted, iced or ceramic bezels; carbon, meteorite or guilloché dials; black ceramic cases; five lume colors; sweep or tick seconds; and a custom dial signature. Looks preserve case architecture and complications, participate in undo/redo, and become permanent only when explicitly saved.
+
+These additions are optional fields on `WatchDesign` version 1. Existing saved designs preserve their original rendering; no database migration is required for the new parts.
 
 ## Stack
 
@@ -41,7 +49,7 @@ Unit tests cover date/timezone boundaries, design compatibility, timers, passphr
 
 ## Deployment
 
-Push a feature branch for a Vercel preview, verify it, then merge to `main`. Vercel runs `pnpm deploy:build`: it verifies the database and applies idempotent, additive schema creation when all credentials are configured, then builds Next.js. Missing setup produces a locked application and skips migrations. Migrations only touch the selected Watchme schema; they never drop tables or modify unrelated schemas.
+Push a feature branch for a Vercel preview, verify it, then merge to `main`. Vercel runs `pnpm deploy:build`: it verifies the database and applies idempotent, additive schema creation when all credentials are configured, then builds Next.js. Missing setup produces a locked application and skips migrations. Migrations only touch the selected WATCHMÉ schema; they never drop tables or modify unrelated schemas.
 
 The application uses the existing `watchme` Vercel project. Avoid creating a replacement project or database. Keep Vercel's deployment protection in place. After release, verify authentication, create/save/reopen/delete, weather, and API authorization on the production URL.
 
@@ -52,4 +60,4 @@ The application uses the existing `watchme` Vercel project. Avoid creating a rep
 - The full-screen display works in-page on all supported browsers. Native fullscreen and screen wake-lock are enhancements that can be denied by the browser or operating system.
 - Countdown completion sound requires a user gesture and a running page. Closed-app/background alarm delivery is not guaranteed.
 - Weather uses Open-Meteo with city search or explicit geolocation. Cached data is labelled stale after refresh failures; weather attribution appears in the interface.
-- All case shapes and designs are original Watchme graphics. Curated layouts prevent complication collisions.
+- All case shapes and designs are original WATCHMÉ graphics. Curated layouts prevent complication collisions.

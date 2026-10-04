@@ -1,7 +1,7 @@
 name: Verify Watchme
 on:
   push:
-    branches: [main, feat/watchme-studio]
+    branches: [main, 'feat/**']
   pull_request:
 permissions:
   contents: read
