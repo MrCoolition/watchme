@@ -1,4 +1,4 @@
-import type { Complication, WatchDesign, WatchFamily, WatchPreset } from "./types";
+import type { ActiveComplication, Complication, WatchDesign, WatchFamily, WatchPreset } from "./types";
 
 export const FLAGSHIP_FAMILIES = ["reactor", "phantom", "helios", "abyss", "prism", "nocturne"] as const;
 export function isFlagshipFamily(family: string): boolean {
@@ -6,6 +6,9 @@ export function isFlagshipFamily(family: string): boolean {
 }
 
 export const WATCH_FAMILIES = ["monolith", "pelagic", "apex", "vesper", "meridian", "orbit", ...FLAGSHIP_FAMILIES] as const satisfies readonly WatchFamily[];
+
+export const ACTIVE_COMPLICATIONS = ["date", "gmt", "chronograph", "weather", "regulator", "daynight", "moonphase"] as const satisfies readonly ActiveComplication[];
+export const MAX_ACTIVE_COMPLICATIONS = 4;
 
 export const PARTS = {
   caseShapes: ["octagonal", "cushion", "tonneau", "round"],
@@ -16,7 +19,7 @@ export const PARTS = {
   hands: ["baton", "sword", "dauphine", "skeleton"],
   markers: ["baton", "roman", "arabic", "minimal"],
   straps: ["bracelet", "leather", "rubber"],
-  complications: ["date", "gmt", "chronograph", "weather", "regulator", "daynight", "moonphase", "none"],
+  complications: [...ACTIVE_COMPLICATIONS, "none"],
 } as const;
 
 export const PRESETS: WatchPreset[] = [
@@ -95,6 +98,71 @@ export function isComplicationCompatible(caseShape: WatchDesign["caseShape"], co
   return true;
 }
 
+function isActiveComplication(value: unknown): value is ActiveComplication {
+  return typeof value === "string" && (ACTIVE_COMPLICATIONS as readonly string[]).includes(value);
+}
+
+const LOWER_DIAL_COMPLICATIONS: readonly ActiveComplication[] = ["weather", "daynight", "moonphase"];
+
+/** Primary first, followed by additional functions in their saved order. */
+export function getComplications(design: WatchDesign): ActiveComplication[] {
+  if (!isActiveComplication(design.complication)) return [];
+  const extras = Array.isArray(design.additionalComplications) ? design.additionalComplications.filter(isActiveComplication) : [];
+  return [...new Set([design.complication, ...extras])];
+}
+
+export function hasComplication(design: WatchDesign, type: Complication): boolean {
+  return type !== "none" && getComplications(design).includes(type);
+}
+
+function conflictWithActive(caseShape: WatchDesign["caseShape"], active: readonly ActiveComplication[], candidate: ActiveComplication): string | null {
+  // Already selected functions remain removable, including after an in-progress case change.
+  if (active.includes(candidate)) return null;
+  if (!isComplicationCompatible(caseShape, candidate)) {
+    return candidate === "regulator"
+      ? "The regulator requires a round case."
+      : "The chronograph requires an octagonal, cushion or tonneau case.";
+  }
+  if (LOWER_DIAL_COMPLICATIONS.includes(candidate)) {
+    if (active.includes("regulator")) return "The regulator already occupies the lower dial.";
+    if (active.some(type => LOWER_DIAL_COMPLICATIONS.includes(type))) return "Moon phase, day/night and weather share the lower dial. Choose one.";
+  }
+  if (candidate === "regulator" && active.some(type => LOWER_DIAL_COMPLICATIONS.includes(type))) {
+    return "The regulator needs the lower dial used by moon phase, day/night or weather.";
+  }
+  if (active.length >= MAX_ACTIVE_COMPLICATIONS) return "A watch supports up to four complications.";
+  return null;
+}
+
+/** Returns why a new function cannot be added; selected functions and `none` remain selectable. */
+export function complicationConflict(design: WatchDesign, candidate: Complication): string | null {
+  if (candidate === "none") return null;
+  if (!isActiveComplication(candidate)) return "Choose a valid complication.";
+  return conflictWithActive(design.caseShape, getComplications(design), candidate);
+}
+
+function hasCompatibleComplications(design: WatchDesign): boolean {
+  const extras = design.additionalComplications;
+  if (extras !== undefined && (!Array.isArray(extras) || extras.length >= MAX_ACTIVE_COMPLICATIONS || !extras.every(isActiveComplication))) return false;
+  if (design.complication === "none") return !extras?.length;
+  if (!isActiveComplication(design.complication)) return false;
+  const active: ActiveComplication[] = [];
+  for (const candidate of [design.complication, ...(extras ?? [])]) {
+    if (!isActiveComplication(candidate) || active.includes(candidate) || conflictWithActive(design.caseShape, active, candidate)) return false;
+    active.push(candidate);
+  }
+  return true;
+}
+
+/** The first compatible item becomes primary; invalid or overlapping later items are dropped. */
+export function setComplications(design: WatchDesign, list: readonly Complication[]): WatchDesign {
+  const active = list.filter(isActiveComplication);
+  const next: WatchDesign = { ...design, complication: active[0] ?? "none" };
+  delete next.additionalComplications;
+  if (active.length > 1) next.additionalComplications = active.slice(1);
+  return normalizeDesign(next);
+}
+
 /** Signature is visible dial text: up to 14 Unicode characters, with no invisible controls or line breaks. */
 export function isValidSignature(value: unknown): value is string {
   return typeof value === "string" && [...value].length <= 14 && !/[\p{C}\p{Zl}\p{Zp}]/u.test(value);
@@ -121,7 +189,7 @@ export function isCompatibleDesign(design: WatchDesign): boolean {
     && (design.signature === undefined || isValidSignature(design.signature))
     && (design.initials === undefined || isValidInitials(design.initials))
     && (design.secondsMotion === undefined || (PARTS.secondsMotions as readonly string[]).includes(design.secondsMotion))
-    && isComplicationCompatible(design.caseShape, design.complication);
+    && hasCompatibleComplications(design);
 }
 
 export function normalizeDesign(design: WatchDesign): WatchDesign {
@@ -145,6 +213,17 @@ export function normalizeDesign(design: WatchDesign): WatchDesign {
   if (design?.signature !== undefined && isValidSignature(design.signature)) normalized.signature = design.signature;
   if (design?.initials !== undefined && isValidInitials(design.initials)) normalized.initials = design.initials;
   if (design?.secondsMotion !== undefined && (PARTS.secondsMotions as readonly string[]).includes(design.secondsMotion)) normalized.secondsMotion = design.secondsMotion;
-  if (!isComplicationCompatible(normalized.caseShape, normalized.complication)) normalized.complication = "none";
+  const active: ActiveComplication[] = [];
+  // Selecting None clears the full layout. If only the case changed, preserve valid extras
+  // and promote the first surviving function when the old primary no longer fits.
+  if (normalized.complication !== "none") {
+    const extras = Array.isArray(design?.additionalComplications) ? design.additionalComplications : [];
+    for (const candidate of [normalized.complication, ...extras]) {
+      if (isActiveComplication(candidate) && !active.includes(candidate) && !conflictWithActive(normalized.caseShape, active, candidate)) active.push(candidate);
+    }
+  }
+  normalized.complication = active[0] ?? "none";
+  if (active.length > 1) normalized.additionalComplications = active.slice(1);
+  else if (Array.isArray(design?.additionalComplications) && design.additionalComplications.length === 0) normalized.additionalComplications = [];
   return normalized;
 }

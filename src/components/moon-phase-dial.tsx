@@ -40,7 +40,7 @@ interface MoonPhaseDialProps {
 
 /** Static relief is shared by the lit surface and faint earthshine; only the terminator changes. */
 export const MoonPhaseDial = memo(function MoonPhaseDial({ id, fill, ink, mutedInk, lumeColor, illuminated, eclipse, discRef, terminatorRef, nameRef, illuminationRef, descriptionRef }: MoonPhaseDialProps) {
-  return <g ref={discRef} data-moon-disc="true" data-moon-phase="" data-moon-illumination="" data-moon-name="" role="img" aria-label="Moon phase" aria-describedby={id("moon-description")}>
+  return <g ref={discRef} data-complication="moonphase" data-moon-disc="true" data-moon-phase="" data-moon-illumination="" data-moon-name="" role="img" aria-label="Moon phase" aria-describedby={id("moon-description")}>
     <desc id={id("moon-description")} ref={descriptionRef}>Current lunar phase and illuminated percentage.</desc>
     <defs>
       <radialGradient id={id("lunar-light")} cx=".32" cy=".26" r=".82"><stop stopColor={illuminated ? lumeColor : "#F2F0E8"} /><stop offset=".45" stopColor={illuminated ? lumeColor : "#D6D5D0"} /><stop offset=".82" stopColor={illuminated ? "#779087" : "#91959C"} /><stop offset="1" stopColor="#4A5361" /></radialGradient>

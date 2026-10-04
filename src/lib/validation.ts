@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isCompatibleDesign, isValidInitials, isValidSignature, PARTS, PRESETS, WATCH_FAMILIES } from "./presets";
+import { ACTIVE_COMPLICATIONS, isCompatibleDesign, isValidInitials, isValidSignature, MAX_ACTIVE_COMPLICATIONS, PARTS, PRESETS, WATCH_FAMILIES } from "./presets";
 
 export const familySchema = z.enum(WATCH_FAMILIES);
 const colorSchema = z.string().regex(/^#[a-f0-9]{6}$/i);
@@ -13,12 +13,13 @@ export const designSchema = z.object({
   markers: z.enum(PARTS.markers),
   strap: z.enum(PARTS.straps),
   complication: z.enum(PARTS.complications),
+  additionalComplications: z.array(z.enum(ACTIVE_COMPLICATIONS)).max(MAX_ACTIVE_COMPLICATIONS - 1).optional(),
   bezel: z.enum(PARTS.bezels).optional(),
   lumeColor: colorSchema.optional(),
   signature: z.string().refine(isValidSignature, "Use up to 14 visible characters for your signature.").optional(),
   initials: z.string().refine(isValidInitials, "Use up to 4 visible characters for your initials.").optional(),
   secondsMotion: z.enum(PARTS.secondsMotions).optional(),
-}).strict().refine(isCompatibleDesign, "The selected complication does not fit this case.");
+}).strict().refine(isCompatibleDesign, "Choose up to four distinct complications that fit this case and dial layout.");
 export const watchInputSchema = z.object({ id: z.uuid().optional(), name: z.string().trim().min(1).max(60), design: designSchema }).strict();
 const timezoneSchema = z.string().max(100).refine((value) => {
   if (!value) return true;

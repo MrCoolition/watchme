@@ -129,6 +129,9 @@ try {
   await page.getByRole('button', { name: 'Design studio', exact: true }).first().click();
   await page.locator('summary').filter({ hasText: 'Strap & function' }).click();
   await page.getByRole('combobox', { name: 'Complication', exact: true }).selectOption('moonphase');
+  for (const name of ['Add Date', 'Add GMT', 'Add Chronograph']) {
+    await page.getByRole('checkbox', { name, exact: true }).check();
+  }
   await assertMoonPhase(page);
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
   assert.equal(await page.getByLabel('Watch name', { exact: true }).inputValue(), fixtureName);
@@ -137,8 +140,11 @@ try {
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: fixtureName, exact: true }).waitFor();
   await assertMoonPhase(page);
-  await page.locator('.watch-specs').getByText('Moon phase', { exact: true }).waitFor();
-  assert.equal(await page.locator('.watch-stage [data-chrono-ring]').count(), 0, 'The saved lunar complication must replace the chronograph layout.');
+  await page.locator('.watch-specs').getByText(/Moon phase/).waitFor();
+  for (const complication of ['moonphase', 'chronograph', 'date', 'gmt']) {
+    await page.locator(`.watch-stage [data-complication="${complication}"]`).waitFor();
+  }
+  assert.equal(await page.locator('.watch-stage [data-chronograph-hand="hours"]').count(), 0, 'The lunar display must occupy the freed lower register.');
 
   stage = 'verifying a second browser context';
   const second = await browser.newContext({ timezoneId: 'America/New_York' });
@@ -149,7 +155,10 @@ try {
     await secondPage.goto(config.url, { waitUntil: 'networkidle' });
     await secondPage.getByRole('heading', { name: fixtureName, exact: true }).waitFor();
     await secondPage.getByRole('button', { name: 'Favorited', exact: true }).waitFor();
-    await secondPage.locator('.watch-specs').getByText('Moon phase', { exact: true }).waitFor();
+    await secondPage.locator('.watch-specs').getByText(/Moon phase/).waitFor();
+    for (const complication of ['moonphase', 'chronograph', 'date', 'gmt']) {
+      await secondPage.locator(`.watch-stage [data-complication="${complication}"]`).waitFor();
+    }
     await assertMoonPhase(secondPage);
     assert.ok(await secondPage.locator('.watch-stage svg').getByText('NIGHT SHIFT', { exact: true }).count());
     stage = 'exporting the persisted lunar edition';
@@ -189,7 +198,7 @@ try {
   await page.getByRole('button', { name: 'Back to the studio', exact: true }).click();
   await page.waitForFunction(() => !document.fullscreenElement);
   assert.deepEqual(runtimeErrors, [], 'The deployed page produced a runtime error.');
-  console.log(`PASS: ${config.schema} deployed session, private APIs, REACTOR engraving, real chronograph controls, Eclipse, independent focus panels, lunar save/reload/favorite, second-browser moon persistence and PNG export, live weather, focus, and mobile face-first layout.`);
+  console.log(`PASS: ${config.schema} deployed session, private APIs, lower-dial engraving, real chronograph controls, Eclipse, independent focus panels, four-complication save/reload/favorite, second-browser persistence and PNG export, live weather, focus, and mobile face-first layout.`);
 } catch (error) {
   console.error(`Remote verification failed while ${stage}. Credentials and private URLs omitted.`);
   console.error(String(error?.message || error).replace(/https?:\/\/\S+/g, '[private URL omitted]').slice(0, 2200));

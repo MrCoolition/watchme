@@ -167,3 +167,32 @@
   .is-focus.has-chronograph .focus-switches > .text-button > span { white-space: normal; text-align: center; }
   .is-focus.has-chronograph .focus-switches > .text-button > svg { width: 14px; height: 14px; }
 }
+
+/* Curated complication layouts retain a primary function and show why extras may not fit. */
+.complication-options { min-width: 0; margin: 1px 0 0; padding: 0; border: 0; }
+.complication-options > legend { width: 100%; padding: 0; margin-bottom: 11px; color: #b5c0a8; font-size: 11px; line-height: 1.5; }
+.complication-count { float: right; color: #859674; font-size: 9px; letter-spacing: .3px; }
+.complication-option-list { display: grid; gap: 6px; }
+.complication-option { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 9px 10px; border: 1px solid #b4c29c1c; border-radius: 5px; background: #ffffff02; cursor: pointer; transition: border-color .15s, background .15s; }
+.complication-option:hover:not(.is-unavailable) { border-color: #b4c29c55; background: #b4c29c07; }
+.complication-option.is-selected { border-color: #b9cca24a; background: #a9c4870d; }
+.complication-option.is-unavailable { cursor: not-allowed; background: transparent; border-color: #ffffff0a; }
+.complication-option:focus-within { outline: 1px solid var(--accent); outline-offset: 2px; }
+.complication-option > input[type=checkbox] { appearance: auto; flex: 0 0 16px; width: 16px; height: 16px; min-height: 16px; margin: 0; padding: 0; accent-color: #c2d6a6; cursor: inherit; }
+.complication-option > span { display: flex; flex-direction: column; min-width: 0; gap: 5px; }
+.complication-option strong { font-size: 12px; line-height: 1.35; font-weight: 400; color: #c4cfb8; }
+.complication-option small { font-size: 10px; line-height: 1.5; color: #88917d; }
+.complication-option.is-unavailable strong { color: #92998a; }
+.watch-specs > .function-spec { align-items: flex-start; }
+.function-spec > strong { max-width: 72%; line-height: 1.6; }
+.hero-topline { gap: 12px; }
+.hero-topline > .eyebrow { min-width: 0; overflow-wrap: anywhere; }
+.edition-index { flex-shrink: 0; }
+@media (max-width: 760px) {
+  .complication-options > legend { font-size: 12px; margin-bottom: 12px; }
+  .complication-count { font-size: 10px; }
+  .complication-option { min-height: 48px; padding: 11px 12px; gap: 12px; }
+  .complication-option > input[type=checkbox] { flex-basis: 18px; width: 18px; height: 18px; min-height: 18px; }
+  .complication-option strong { font-size: 14px; }
+  .complication-option small { font-size: 11px; }
+}

@@ -20,7 +20,11 @@ Use the Black Label collection filter to find all six flagships. Each supports E
 
 Choose **Design studio → Strap & function → Complication → Moon phase** to add a live lunar aperture to any watch. It shows the illuminated lunar disc, phase name, and illumination percentage. [Astronomy Engine](https://github.com/cosinekitty/astronomy/tree/master/source/js#MoonPhase) computes the phase locally from the current UTC instant; no location or external API is required. The disc uses a conventional north-up presentation. Calculations are checked against [US Naval Observatory phase times](https://aa.usno.navy.mil/calculated/moon/phases?year=2026). This is separate from NOCTURNE's civil-time day/night indicator.
 
-In **Front & center**, **Digital time** controls the clock/date display and **Chronograph panel** independently controls the stopwatch panel. Hiding the panel leaves the stopwatch running and the case pushers working. The face expands into the freed space. Both choices are remembered on the current device.
+Use **Additional complications** to combine up to four functions. Date, GMT, chronograph and moon phase can share one watch. Moon phase, weather and day/night each use the lower dial, so choose one; the regulator already occupies that position. With a lower-dial feature selected, a chronograph uses two registers (running seconds and elapsed minutes), while its digital timer retains the complete elapsed duration. Case changes preserve compatible functions. Existing watches keep their original layouts until edited.
+
+In **Front & center**, **Digital time** controls the clock/date display and **Timer panel** independently controls the stopwatch panel. Hiding the panel leaves the stopwatch running and the case pushers working when the case is visible. The face expands into the freed space. Both choices are remembered on the current device.
+
+Dial signatures and initials share one engraving line along the lower dial, beyond the main hour and minute hands. The default “DESIGNED FOR YOU” footer has been removed.
 
 ## BLACK LABEL / REACTOR
 

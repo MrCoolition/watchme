@@ -26,7 +26,7 @@ function Bridge({ children, fill }: { children: ReactNode; fill: (name: string) 
   return <g fill={fill("mechanical-bridge")} stroke="#77928F" strokeWidth="1.1">{children}</g>;
 }
 
-export const MechanicalMovement = memo(function MechanicalMovement({ fill, accent, initials }: { fill: (name: string) => string; accent: string; initials?: string }) {
+export const MechanicalMovement = memo(function MechanicalMovement({ fill, accent }: { fill: (name: string) => string; accent: string }) {
   const spiral = Array.from({ length: 125 }, (_, index) => {
     const angle = index / 124 * Math.PI * 10;
     const radius = 3 + index / 124 * 21;
@@ -62,6 +62,6 @@ export const MechanicalMovement = memo(function MechanicalMovement({ fill, accen
     <path d="M209 220L260 293M399 279L438 230M188 396L224 412M453 412L449 433" fill="none" stroke={accent} strokeOpacity=".65" strokeWidth="1.6" />
     {[[208, 222], [441, 230], [193, 398], [281, 434], [460, 396], [445, 461], [291, 493], [361, 488]].map(([x, y], index) => <g key={index}><circle cx={x} cy={y} r="5.8" fill="#071116" stroke="#A1B2B1" strokeWidth=".8" /><circle cx={x} cy={y} r="3.5" fill={fill("metal")} /><path d={`M${x - 2.4} ${y + 1}L${x + 2.4} ${y - 1}`} stroke="#071015" strokeWidth="1" /></g>)}
     <path d="M296 281H344L350 294H290Z" fill="#071013" stroke="#668780" strokeWidth=".7" />
-    <text x="320" y="290.5" textAnchor="middle" fill="#BCD1C6" fontSize="7" letterSpacing="1.8">{initials || "REACTOR"}</text>
+    <text x="320" y="290.5" textAnchor="middle" fill="#BCD1C6" fontSize="7" letterSpacing="1.8">REACTOR</text>
   </g>;
 });

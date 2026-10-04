@@ -8,6 +8,7 @@ export type Hands = "baton" | "sword" | "dauphine" | "skeleton";
 export type Markers = "baton" | "roman" | "arabic" | "minimal";
 export type Strap = "bracelet" | "leather" | "rubber";
 export type Complication = "date" | "gmt" | "chronograph" | "weather" | "regulator" | "daynight" | "moonphase" | "none";
+export type ActiveComplication = Exclude<Complication, "none">;
 export interface WatchDesign {
   version: 1;
   family: WatchFamily;
@@ -20,6 +21,7 @@ export interface WatchDesign {
   strap: Strap;
   accentColor: string;
   complication: Complication;
+  additionalComplications?: ActiveComplication[];
   bezel?: Bezel;
   lumeColor?: string;
   signature?: string;
