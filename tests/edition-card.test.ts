@@ -1,11 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { buildEditionCardSvg, editionFilename, editionFingerprint, editionFunctions, editionInitials, editionSeconds, editionSpecs, editionTitle, escapeXml } from "../src/lib/edition-card";
+import { buildEditionCardSvg, editionAccentInk, editionFilename, editionFingerprint, editionFunctions, editionInitials, editionSeconds, editionSpecs, editionTitle, escapeXml } from "../src/lib/edition-card";
 import { PARTS, PRESETS, isFlagshipFamily } from "../src/lib/presets";
 import type { WatchDesign } from "../src/lib/types";
+import { getEditionDetails, getEditionPages, type EditionReference } from "../src/lib/edition-details";
 
 const design = PRESETS[0].design;
+const textContent = (svg: string) => Array.from(svg.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g), match => match[1]).join(" ").replace(/\s+/g, " ");
 
 describe("edition card artwork", () => {
+  it("keeps dark accent ink readable while preserving actual black watch colors and swatches", () => {
+    const luminance = (hex: string) => [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16) / 255).map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+    for (const accent of ["#000000", "#001122", "#000080", "#550033", "#79E8C5"]) {
+      const ink = editionAccentInk(accent);
+      expect((luminance(ink) + .05) / (luminance("#162023") + .05)).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(editionAccentInk("#79E8C5")).toBe("#79E8C5");
+    const ink = editionAccentInk("#000000");
+    expect(ink).not.toBe("#000000");
+    const artwork = buildEditionCardSvg({ design: { ...design, accentColor: "#000000" }, name: "Black study", watchSvg: '<svg><circle id="actual-black-watch" fill="#000000"/></svg>' });
+    expect(artwork).toContain(`fill="${ink}"`);
+    expect(artwork).toMatch(/data-edition-color="accent"><circle[^>]*fill="#000000"/);
+    expect(artwork).toContain('id="actual-black-watch" fill="#000000"');
+    expect(textContent(artwork)).toContain("#000000");
+  });
+
   it("escapes user text without interpreting markup in the exported XML", () => {
     expect(escapeXml(`<script a="x">&'</script>`)).toBe("&lt;script a=&quot;x&quot;&gt;&amp;&apos;&lt;/script&gt;");
     const artwork = buildEditionCardSvg({ design: { ...design, initials: "<AB>" }, name: "<img>&\"", watchSvg: '<svg viewBox="0 0 640 720"><path id="real-watch"/></svg>' });
@@ -13,7 +31,7 @@ describe("edition card artwork", () => {
     expect(artwork).toContain("&lt;AB&gt;");
     expect(artwork).not.toContain("<img>");
     expect(artwork).toContain('id="real-watch"');
-    expect(artwork).toContain('<svg x="90" y="259" width="900" height="780" viewBox="0 0 640 720">');
+    expect(artwork).toMatch(/<svg viewBox="0 0 640 720" x="\d+" y="\d+" width="\d+" height="\d+" preserveAspectRatio="xMidYMid meet">/);
   });
 
   it("fits long names on at most two lines without splitting Unicode code points", () => {
@@ -90,7 +108,7 @@ describe("edition card artwork", () => {
       { label: "STRAP", value: "Beads-of-rice bracelet", detail: "Color #A1B2C3" },
     ]);
     const artwork = buildEditionCardSvg({ design: customized, name: "Pearl", watchSvg: "<svg/>" });
-    expect(artwork).toContain("MOTHER-OF-PEARL");
+    expect(artwork).toContain("Mother-of-pearl");
     expect(artwork).not.toContain("MOTHEROFPEARL");
     expect(artwork).toContain("Rectangular · Hammered");
   });
@@ -144,13 +162,72 @@ describe("edition card artwork", () => {
       secondsPlacement: "peripheral", secondsMotion: "stepped", secondsAdvances: 16,
     };
     const artwork = buildEditionCardSvg({ design: customized, name: "Complete specification", watchSvg: "<svg/>" });
-    expect(artwork).toContain('textLength="200" lengthAdjust="spacingAndGlyphs">Mercedes-style · California numerals</text>');
-    expect(artwork).not.toContain('textLength="215"');
+    expect(textContent(artwork)).toContain("Mercedes-style · California numerals");
+    expect(artwork).not.toContain('lengthAdjust="spacingAndGlyphs"');
     for (const spec of editionSpecs(customized)) {
-      expect(artwork).toContain(escapeXml(spec.value));
-      expect(artwork).toContain(escapeXml(spec.detail));
+      expect(textContent(artwork)).toContain(escapeXml(spec.value));
+      expect(textContent(artwork)).toContain(escapeXml(spec.detail));
     }
     expect(artwork).toContain(escapeXml(editionFunctions(customized)));
     expect(artwork).toContain("DAYLIGHT / ELAPSED / PERIPHERAL / 16 ADVANCES/S");
+  });
+
+  it("defaults to an illustrated portrait while keeping the original filename", () => {
+    const artwork = buildEditionCardSvg({ design, name: "One of my own", watchSvg: '<svg width="640" height="720" viewBox="0 0 640 720"><path id="frozen-hands"/></svg>' });
+    expect(artwork).toContain('data-edition-page="portrait"');
+    expect(artwork.match(/data-edition-callout=/g)).toHaveLength(3);
+    expect(artwork.match(/data-edition-color=/g)).toHaveLength(3);
+    expect(artwork).toContain('id="frozen-hands"');
+    const portrait = getEditionPages(design)[0];
+    expect(editionFilename("One of my own", design, portrait)).toBe(editionFilename("One of my own", design));
+    expect(editionFilename("One of my own", design, getEditionPages(design)[1])).toMatch(/-build\.png$/);
+  });
+
+  it("prints every build value and note, including defaults and saved inactive settings", () => {
+    const customized: WatchDesign = { ...design, strap: "leather", braceletStyle: "engineer", texture: "motherofpearl", secondsIndication: "none", secondsMotion: "stepped", secondsAdvances: 16, secondsSetting: "zero-reset", chronographBehavior: "flyback", lumeStyle: "none", lumeColor: "#A1B2C3", signature: "A <B> & C", initials: "WM" };
+    const name = "An exceptionally long personally named watch for a unique collection of originals";
+    const artwork = buildEditionCardSvg({ design: customized, name, watchSvg: '<svg><path id="portrait-only"/></svg>', page: { id: "build", kind: "build", label: "Build sheet" }, timezone: "America/New_York", secondaryTimezone: "Asia/Tokyo", isDraft: true });
+    const text = textContent(artwork);
+    expect(artwork).toContain('data-edition-page="build"');
+    expect(artwork.match(/data-edition-section=/g)).toHaveLength(6);
+    expect(text).toContain(name);
+    expect(text).toContain("DRAFT SNAPSHOT");
+    expect(text).toContain("America/New_York");
+    expect(text).toContain("Asia/Tokyo");
+    for (const section of getEditionDetails(customized)) for (const row of section.rows) {
+      expect(text).toContain(escapeXml(row.value));
+      if (row.note) expect(text).toContain(escapeXml(row.note));
+    }
+    expect(artwork).not.toContain('id="portrait-only"');
+    expect(text).toContain("Saved reference only; device time remains authoritative.");
+    expect(text).toContain("Saved / inactive on the selected strap.");
+  });
+
+  it("prints forty saved references exactly once across four readable reference pages", () => {
+    const references: EditionReference[] = Array.from({ length: 40 }, (_, i) => ({ id: `reference-${i + 1}`, category: "Movement research", option: `Saved option ${i + 1}`, description: `An original research note number ${i + 1} with enough detail to wrap across several lines while preserving the entire wording.`, sourceLabel: `Master catalog · row ${i + 2}`, sourceUrl: `https://example.com/reference/${i + 1}` }));
+    const customized = { ...design, catalogReferences: references.map(reference => reference.id) };
+    const pages = getEditionPages(customized);
+    expect(pages).toHaveLength(6);
+    const cards = pages.filter(page => page.kind === "references").map(page => buildEditionCardSvg({ design: customized, name: "Research edition", watchSvg: "<svg/>", page, references }));
+    expect(cards.map(card => card.match(/data-edition-reference=/g)?.length)).toEqual([12, 12, 12, 4]);
+    const combined = cards.join("");
+    const text = textContent(combined);
+    for (const reference of references) {
+      expect(combined.split(`data-edition-reference="${reference.id}"`)).toHaveLength(2);
+      expect(text).toContain(reference.option);
+      expect(text).toContain(reference.description);
+      expect(combined).toContain(`href="${reference.sourceUrl}"`);
+    }
+    expect(editionFilename("Research edition", customized, pages[5])).toMatch(/-references-4\.png$/);
+  });
+
+  it("keeps unavailable references visible and escapes reference text and source URLs", () => {
+    const customized = { ...design, catalogReferences: ["missing-1", "malicious-2"] };
+    const artwork = buildEditionCardSvg({ design: customized, name: "References", watchSvg: "<svg/>", page: getEditionPages(customized)[2], references: [{ id: "malicious-2", category: "<script>", option: "<img> & reference", description: 'Quoted "notes" & text', sourceLabel: "A <source>", sourceUrl: "javascript:alert(1)" }] });
+    expect(artwork).toContain("Missing reference: missing-1");
+    expect(artwork).toContain("&lt;img&gt; &amp; reference");
+    expect(artwork).not.toContain("<script>");
+    expect(artwork).not.toContain("javascript:");
+    expect(artwork.match(/data-edition-reference=/g)).toHaveLength(2);
   });
 });

@@ -46,7 +46,9 @@ REACTOR introduces an open mechanical dial with moving gears and a balance wheel
 
 Every chronograph has Start/Pause/Resume, Lap, and Reset directly beneath its face, including Front & center. The upper case pusher starts or pauses; the lower pusher resets. Subdial hands and the timing ring follow the same timestamp-based stopwatch, restored after reload on the current device.
 
-Add up to four engraved initials in Signature & light and download a 1080 × 1350 edition card from the real watch rendering. Cards include the watch name, finishes, initials, and a design fingerprint, and are rendered locally in the browser.
+Add up to four engraved initials in Signature & light, then open the edition-card viewer for a complete collector set. The 1080 × 1350 portrait uses the actual watch rendering with numbered part callouts, color swatches, engraving, and a design fingerprint. A separate build sheet records every part, color, complication, seconds setting, and saved inactive customization. Saved catalog references appear in order on additional cards, twelve per page.
+
+Use the viewer tabs and zoom controls to inspect each card. Download an individual PNG or the complete ZIP containing every card and `design.json`, including the full configuration, time zones, captured display state, and reference sources. Unsaved drafts are marked on the cards. All artwork and downloads are generated locally in the browser.
 
 ## Front & center and the Atelier
 

@@ -214,6 +214,43 @@ try {
     assert.equal(bytes.readUInt32BE(20), 1350);
     assert.ok(bytes.length > 50000, 'The exported edition should contain the rendered watch.');
     await download.saveAs(`.setup/${config.schema}-moon-edition.png`);
+    stage = 'exporting the collector build sheet and complete edition';
+    await edition.getByRole('tab', { name: 'Build sheet', exact: true }).click();
+    const [buildCard] = await Promise.all([
+      secondPage.waitForEvent('download'),
+      edition.getByRole('button', { name: 'Download PNG', exact: true }).click(),
+    ]);
+    assert.match(buildCard.suggestedFilename(), /build\.png$/);
+    await buildCard.saveAs(`.setup/${config.schema}-build-sheet.png`);
+    await edition.getByRole('tab', { name: 'References 1', exact: true }).click();
+    const [completeEdition] = await Promise.all([
+      secondPage.waitForEvent('download'),
+      edition.getByRole('button', { name: 'Download complete edition', exact: true }).click(),
+    ]);
+    assert.match(completeEdition.suggestedFilename(), /collector-edition\.zip$/);
+    const archiveStream = await completeEdition.createReadStream();
+    const archiveChunks = []; for await (const chunk of archiveStream) archiveChunks.push(chunk);
+    const archive = Buffer.concat(archiveChunks);
+    const files = new Map(); let cursor = 0;
+    while (archive.readUInt32LE(cursor) === 0x04034b50) {
+      const size = archive.readUInt32LE(cursor + 18);
+      const nameLength = archive.readUInt16LE(cursor + 26);
+      const extraLength = archive.readUInt16LE(cursor + 28);
+      const name = archive.subarray(cursor + 30, cursor + 30 + nameLength).toString('utf8');
+      const start = cursor + 30 + nameLength + extraLength;
+      files.set(name, archive.subarray(start, start + size)); cursor = start + size;
+    }
+    assert.equal(files.size, 4);
+    const manifest = JSON.parse(files.get('design.json').toString('utf8'));
+    assert.equal(manifest.name, fixtureName);
+    assert.equal(manifest.design.metal, 'bronze');
+    assert.equal(manifest.design.secondsPlacement, 'peripheral');
+    assert.equal(manifest.design.secondsAdvances, 16);
+    assert.equal(manifest.references[0].option, 'ECG recording app');
+    for (const [name, file] of files) if (name.endsWith('.png')) {
+      assert.equal(file.readUInt32BE(16), 1080); assert.equal(file.readUInt32BE(20), 1350);
+    }
+    await completeEdition.saveAs(`.setup/${config.schema}-collector-edition.zip`);
   } finally { await second.close(); }
   stage = 'verifying live weather';
   const weather = await context.request.get(`${config.url}/api/weather?lat=40.7&lon=-74&unit=fahrenheit`);
