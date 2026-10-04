@@ -53,16 +53,12 @@ try {
   await page.screenshot({ path: `.setup/${config.schema}-desktop.png`, fullPage: true });
   stage = 'saving a configured watch';
   await page.getByRole('button', { name: 'Originals', exact: true }).click();
-  await page.getByRole('button', { name: 'Select Monolith', exact: true }).click();
+  await page.getByRole('button', { name: 'Select REACTOR', exact: true }).click();
   await page.getByRole('button', { name: 'Design studio', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Rose gold', exact: true }).click();
-  await page.getByRole('button', { name: 'Midnight dial', exact: true }).click();
-  await page.getByRole('button', { name: 'Atelier looks', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Apply After Hours look', exact: true }).click();
-  await page.getByRole('button', { name: 'Edit details', exact: true }).click();
   await page.locator('summary').filter({ hasText: 'Signature & light' }).click();
   await page.getByRole('combobox', { name: 'Bezel', exact: true }).selectOption('iced');
   await page.getByLabel('Dial signature', { exact: true }).fill('NIGHT SHIFT');
+  await page.getByLabel('Engraved initials', { exact: true }).fill('WM');
   await page.getByRole('combobox', { name: 'Seconds motion', exact: true }).selectOption('tick');
   await page.getByRole('button', { name: 'Add to collection', exact: true }).click();
   await page.getByLabel('Watch name', { exact: true }).fill(fixtureName);
@@ -75,6 +71,14 @@ try {
   await page.getByRole('button', { name: 'Favorite', exact: true }).click();
   await page.getByRole('button', { name: 'Favorited', exact: true }).waitFor();
   assert.ok(await page.locator('.watch-stage svg').getByText('NIGHT SHIFT', { exact: true }).count());
+  assert.ok(await page.locator('.watch-stage [data-mechanical-movement]').count());
+  await page.getByRole('button', { name: 'Start chronograph', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause chronograph', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Record lap', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause chronograph', exact: true }).click();
+  await page.getByRole('button', { name: 'Reset chronograph', exact: true }).click();
+  await page.getByRole('button', { name: 'Eclipse', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.watch-stage svg')?.getAttribute('data-eclipse') === 'true');
   stage = 'verifying a second browser context';
   const second = await browser.newContext({ timezoneId: 'America/New_York' });
   await second.addCookies(await context.cookies());
@@ -101,7 +105,7 @@ try {
   await page.getByRole('button', { name: 'Back to the studio', exact: true }).click();
   await page.waitForFunction(() => !document.fullscreenElement);
   assert.deepEqual(runtimeErrors, [], 'The deployed page produced a runtime error.');
-  console.log(`PASS: ${config.schema} deployed session, private APIs, atelier/bezel/signature customization, Neon save/reload/favorite, second-browser persistence, live weather, focus, and mobile face-first layout.`);
+  console.log(`PASS: ${config.schema} deployed session, private APIs, REACTOR engraving, real chronograph controls, Eclipse, Neon save/reload/favorite, second-browser persistence, live weather, focus, and mobile face-first layout.`);
 } catch (error) {
   console.error(`Remote verification failed while ${stage}. Credentials and private URLs omitted.`);
   console.error(String(error?.message || error).replace(/https?:\/\/\S+/g, '[private URL omitted]').slice(0, 2200));

@@ -1,6 +1,14 @@
 # WATCHMÉ
 
-A private, dial-first watch collection and design studio. Six original live watches, curated customization, saved collections, chronograph, countdown, dual time, weather, and a distraction-free display.
+A private, dial-first watch collection and design studio. Seven original live watches, curated customization, saved collections, chronograph, countdown, dual time, weather, and a distraction-free display.
+
+## BLACK LABEL / REACTOR
+
+REACTOR introduces an open mechanical dial with moving gears and a balance wheel, ceramic architecture, and electric mint accents. Drag across the watch to move its reflections, or focus the watch and use arrow keys; Home resets the light. Eclipse turns the dial into a luminous night display. Decorative motion respects reduced-motion and visibility preferences.
+
+Every chronograph has Start/Pause/Resume, Lap, and Reset directly beneath its face, including Front & center. The upper case pusher starts or pauses; the lower pusher resets. Subdial hands and the timing ring follow the same timestamp-based stopwatch, restored after reload on the current device.
+
+Add up to four engraved initials in Signature & light and download a 1080 × 1350 edition card from the real watch rendering. Cards include the watch name, finishes, initials, and a design fingerprint, and are rendered locally in the browser.
 
 ## Front & center and the Atelier
 

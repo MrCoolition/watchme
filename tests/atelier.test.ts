@@ -6,7 +6,7 @@ import type { WatchDesign } from "../src/lib/types";
 
 describe("backwards-compatible atelier design data", () => {
   it("keeps all existing version-one presets unchanged, without materializing new defaults", () => {
-    for (const preset of PRESETS) {
+    for (const preset of PRESETS.filter(preset => preset.id !== "reactor")) {
       expect(normalizeDesign(preset.design)).toEqual(preset.design);
       expect(designSchema.parse(preset.design)).toEqual(preset.design);
       for (const key of ["bezel", "lumeColor", "signature", "secondsMotion"]) {

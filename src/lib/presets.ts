@@ -3,7 +3,7 @@ import type { Complication, WatchDesign, WatchPreset } from "./types";
 export const PARTS = {
   caseShapes: ["octagonal", "cushion", "tonneau", "round"],
   metals: ["steel", "titanium", "gold", "rose", "graphite", "ceramic"],
-  textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche"],
+  textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche", "mechanical"],
   bezels: ["polished", "fluted", "iced", "ceramic"],
   secondsMotions: ["sweep", "tick"],
   hands: ["baton", "sword", "dauphine", "skeleton"],
@@ -43,6 +43,11 @@ export const PRESETS: WatchPreset[] = [
     description: "Hours above. Seconds below. Time, in a different constellation.",
     design: { version: 1, family: "orbit", caseShape: "round", metal: "titanium", dialColor: "#101D3C", texture: "sunburst", hands: "sword", markers: "minimal", strap: "leather", accentColor: "#91ADFF", complication: "regulator" },
   },
+  {
+    id: "reactor", name: "REACTOR", edition: "BLACK LABEL / 07", category: "BLACK LABEL · MECHANICAL CHRONOGRAPH",
+    description: "A machine in motion. Open mechanics, cut ceramic, and a pulse of electric mint.",
+    design: { version: 1, family: "reactor", caseShape: "octagonal", metal: "ceramic", dialColor: "#101D20", texture: "mechanical", hands: "skeleton", markers: "baton", strap: "rubber", accentColor: "#79E8C5", complication: "chronograph", bezel: "ceramic", lumeColor: "#9FFFD0", secondsMotion: "sweep" },
+  },
 ];
 
 export const COMPLICATIONS_BY_FAMILY = PRESETS.reduce((registry, preset) => {
@@ -61,6 +66,10 @@ export function isValidSignature(value: unknown): value is string {
   return typeof value === "string" && [...value].length <= 14 && !/[\p{C}\p{Zl}\p{Zp}]/u.test(value);
 }
 
+export function isValidInitials(value: unknown): value is string {
+  return isValidSignature(value) && [...value].length <= 4;
+}
+
 export function isCompatibleDesign(design: WatchDesign): boolean {
   if (!design || typeof design !== "object" || design.version !== 1) return false;
   return PRESETS.some((preset) => preset.id === design.family)
@@ -76,6 +85,7 @@ export function isCompatibleDesign(design: WatchDesign): boolean {
     && (design.bezel === undefined || (PARTS.bezels as readonly string[]).includes(design.bezel))
     && (design.lumeColor === undefined || (typeof design.lumeColor === "string" && /^#[a-f\d]{6}$/i.test(design.lumeColor)))
     && (design.signature === undefined || isValidSignature(design.signature))
+    && (design.initials === undefined || isValidInitials(design.initials))
     && (design.secondsMotion === undefined || (PARTS.secondsMotions as readonly string[]).includes(design.secondsMotion))
     && isComplicationCompatible(design.caseShape, design.complication);
 }
@@ -99,6 +109,7 @@ export function normalizeDesign(design: WatchDesign): WatchDesign {
   if (design?.bezel !== undefined && (PARTS.bezels as readonly string[]).includes(design.bezel)) normalized.bezel = design.bezel;
   if (typeof design?.lumeColor === "string" && /^#[a-f\d]{6}$/i.test(design.lumeColor)) normalized.lumeColor = design.lumeColor;
   if (design?.signature !== undefined && isValidSignature(design.signature)) normalized.signature = design.signature;
+  if (design?.initials !== undefined && isValidInitials(design.initials)) normalized.initials = design.initials;
   if (design?.secondsMotion !== undefined && (PARTS.secondsMotions as readonly string[]).includes(design.secondsMotion)) normalized.secondsMotion = design.secondsMotion;
   if (!isComplicationCompatible(normalized.caseShape, normalized.complication)) normalized.complication = "none";
   return normalized;

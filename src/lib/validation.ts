@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { isCompatibleDesign, isValidSignature, PARTS } from "./presets";
+import { isCompatibleDesign, isValidInitials, isValidSignature, PARTS, PRESETS } from "./presets";
 
-export const familySchema = z.enum(["monolith", "pelagic", "apex", "vesper", "meridian", "orbit"]);
+export const familySchema = z.enum(["monolith", "pelagic", "apex", "vesper", "meridian", "orbit", "reactor"]);
 const colorSchema = z.string().regex(/^#[a-f0-9]{6}$/i);
 export const designSchema = z.object({
   version: z.literal(1), family: familySchema,
@@ -16,6 +16,7 @@ export const designSchema = z.object({
   bezel: z.enum(PARTS.bezels).optional(),
   lumeColor: colorSchema.optional(),
   signature: z.string().refine(isValidSignature, "Use up to 14 visible characters for your signature.").optional(),
+  initials: z.string().refine(isValidInitials, "Use up to 4 visible characters for your initials.").optional(),
   secondsMotion: z.enum(PARTS.secondsMotions).optional(),
 }).strict().refine(isCompatibleDesign, "The selected complication does not fit this case.");
 export const watchInputSchema = z.object({ id: z.uuid().optional(), name: z.string().trim().min(1).max(60), design: designSchema }).strict();
@@ -29,7 +30,7 @@ export const preferencesSchema = z.object({
   secondaryTimezone: timezoneSchema.refine(Boolean, "Choose a secondary time zone."),
   unit: z.enum(["fahrenheit", "celsius"]), location: locationSchema.nullable(),
   activeWatchId: z.union([familySchema, z.uuid()]),
-  favoritePresets: z.array(familySchema).max(6).transform((values) => [...new Set(values)]),
+  favoritePresets: z.array(familySchema).max(PRESETS.length).transform((values) => [...new Set(values)]),
 }).strict();
 export const weatherQuerySchema = z.object({
   lat: z.string().trim().min(1).pipe(z.coerce.number<string>().finite().min(-90).max(90)),

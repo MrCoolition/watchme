@@ -1,0 +1,56 @@
+import { expect, test } from "@playwright/test";
+
+test("edition PNG is the exact 1080 × 1350 preview with a real personalized watch", async ({ page }, testInfo) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", error => runtimeErrors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Discover REACTOR" }).click();
+  await page.getByRole("button", { name: "Design studio", exact: true }).first().click();
+  await page.locator("summary").filter({ hasText: "Signature & light" }).click();
+  await page.getByLabel("Engraved initials").fill("ABCD");
+  await page.getByRole("button", { name: "Download edition card", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Your edition card", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(/UNSAVED DRAFT/)).toBeVisible();
+  const button = dialog.getByRole("button", { name: "Download PNG", exact: true });
+  await expect(button).toBeEnabled();
+  const canvas = dialog.locator("canvas");
+  const preview = await canvas.evaluate(node => (node as HTMLCanvasElement).toDataURL("image/png"));
+  const watch = dialog.locator("svg[data-framing='watch']");
+  await expect(watch.locator("desc")).not.toContainText("Live watch showing");
+  expect(await watch.locator('g[transform^="rotate("]').count()).toBeGreaterThan(3);
+  const downloadPending = page.waitForEvent("download");
+  await button.click();
+  const download = await downloadPending;
+  expect(download.suggestedFilename()).toMatch(/^watchme-reactor-[a-f0-9]{8}\.png$/);
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const bytes = Buffer.concat(chunks);
+  expect(bytes.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+  expect(bytes.readUInt32BE(16)).toBe(1080);
+  expect(bytes.readUInt32BE(20)).toBe(1350);
+  expect(bytes.equals(Buffer.from(preview.split(",")[1], "base64"))).toBe(true);
+  expect(bytes.length).toBeGreaterThan(150_000);
+  await download.saveAs(testInfo.outputPath("reactor-edition.png"));
+  await expect(dialog.getByRole("status")).toContainText("Download started");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  expect(runtimeErrors).toEqual([]);
+});
+
+test("edition preview and download stay usable in mobile focus mode", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => { document.documentElement.requestFullscreen = async () => { throw new Error("Fullscreen unavailable"); }; });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Discover REACTOR" }).click();
+  await page.getByRole("button", { name: "Enter focus mode", exact: true }).first().click();
+  await page.getByRole("button", { name: "Download edition card", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Your edition card", exact: true });
+  await expect(dialog.getByRole("button", { name: "Download PNG", exact: true })).toBeEnabled();
+  expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  const canvas = await dialog.locator("canvas").boundingBox();
+  expect(canvas!.width).toBeLessThan(390);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Back to the studio", exact: true })).toBeVisible();
+});
