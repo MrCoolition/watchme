@@ -28,6 +28,7 @@ interface MoonPhaseDialProps {
   fill: (name: string) => string;
   ink: string;
   mutedInk: string;
+  isLight: boolean;
   lumeColor: string;
   illuminated: boolean;
   eclipse: boolean;
@@ -39,7 +40,7 @@ interface MoonPhaseDialProps {
 }
 
 /** Static relief is shared by the lit surface and faint earthshine; only the terminator changes. */
-export const MoonPhaseDial = memo(function MoonPhaseDial({ id, fill, ink, mutedInk, lumeColor, illuminated, eclipse, discRef, terminatorRef, nameRef, illuminationRef, descriptionRef }: MoonPhaseDialProps) {
+export const MoonPhaseDial = memo(function MoonPhaseDial({ id, fill, ink, mutedInk, isLight, lumeColor, illuminated, eclipse, discRef, terminatorRef, nameRef, illuminationRef, descriptionRef }: MoonPhaseDialProps) {
   return <g ref={discRef} data-complication="moonphase" data-moon-disc="true" data-moon-phase="" data-moon-illumination="" data-moon-name="" role="img" aria-label="Moon phase" aria-describedby={id("moon-description")}>
     <desc id={id("moon-description")} ref={descriptionRef}>Current lunar phase and illuminated percentage.</desc>
     <defs>
@@ -66,7 +67,11 @@ export const MoonPhaseDial = memo(function MoonPhaseDial({ id, fill, ink, mutedI
         <use href={`#${id("lunar-relief")}`} />
       </g>
     </g>
+    <g data-moon-label-plate="true">
+      <rect x="262" y="474" width="116" height="26" rx="3" fill={isLight && !illuminated ? "#E1E7E4" : "#061015"} stroke={ink} strokeOpacity=".17" strokeWidth=".55" />
+      <path d="M266 475H374" stroke={ink} strokeOpacity=".1" strokeWidth=".5" />
+    </g>
     <text ref={nameRef} x="320" y="484" fill={ink} textAnchor="middle" fontSize="8" letterSpacing=".8">—</text>
-    <text ref={illuminationRef} x="320" y="496" fill={mutedInk} textAnchor="middle" fontSize="6.7" letterSpacing=".85">—</text>
+    <text ref={illuminationRef} x="320" y="496" fill={illuminated ? lumeColor : mutedInk} opacity={illuminated ? ".78" : "1"} textAnchor="middle" fontSize="6.7" letterSpacing=".85">—</text>
   </g>;
 });

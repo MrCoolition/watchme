@@ -14,6 +14,7 @@ assert.ok(process.env.SESSION_SECRET && process.env.WATCHME_PASSWORD_HASH);
 const session = await sealData({ authenticated: true, issuedAt: Date.now(), authVersion: createHash('sha256').update(process.env.WATCHME_PASSWORD_HASH).digest('hex') }, { password: process.env.SESSION_SECRET, ttl: 3600 });
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
+context.setDefaultTimeout(20000);
 // Keep viewport transitions deterministic on Windows; focus must also work without native fullscreen.
 await context.addInitScript(() => { Element.prototype.requestFullscreen = async () => { throw new Error('Verify in-page focus'); }; });
 const page = await context.newPage();
@@ -219,7 +220,7 @@ try {
       if (originalSelection) {
         await page.getByRole('button', { name: originalTab === 'originals' ? 'Originals' : /My creations/, exact: originalTab === 'originals' }).click();
         const [response] = await Promise.all([
-          page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).origin === target.origin && Boolean(response.request().headers()['next-action'])),
+          page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).origin === target.origin && !response.request().isNavigationRequest()),
           page.getByRole('button', { name: originalSelection, exact: true }).click(),
         ]);
         assert.equal(response.status(), 200);
@@ -229,7 +230,7 @@ try {
         assert.equal(await page.getByRole('button', { name: originalSelection, exact: true }).getAttribute('aria-pressed'), 'true');
       }
       console.log('Verification cleanup complete; original selection restored.');
-    } catch { console.error('Verification watch cleanup needs attention.'); process.exitCode = 1; }
+    } catch (error) { console.error('Verification watch cleanup needs attention.'); console.error(String(error?.message || error).replace(/https?:\/\/\S+/g, '[private URL omitted]').slice(0, 1500)); process.exitCode = 1; }
   }
   await browser.close();
 }

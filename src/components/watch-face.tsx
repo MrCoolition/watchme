@@ -434,7 +434,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       <path d="M270 440Q320 454 370 440" fill="none" stroke={metal.light} strokeOpacity=".55" strokeWidth=".6" />
       <text ref={dayNightLabelRef} data-daynight-label="true" x="320" y="471" textAnchor="middle" fill={ink} fontSize="8" letterSpacing="2">24H</text>
     </g>}
-    {moonPhase && <MoonPhaseDial id={id} fill={fill} ink={ink} mutedInk={mutedInk} lumeColor={lumeColor} illuminated={illuminated} eclipse={eclipse} discRef={moonDiscRef} terminatorRef={moonTerminatorRef} nameRef={moonNameRef} illuminationRef={moonIlluminationRef} descriptionRef={moonDescriptionRef} />}
+    {moonPhase && <MoonPhaseDial id={id} fill={fill} ink={ink} mutedInk={mutedInk} isLight={isLight} lumeColor={lumeColor} illuminated={illuminated} eclipse={eclipse} discRef={moonDiscRef} terminatorRef={moonTerminatorRef} nameRef={moonNameRef} illuminationRef={moonIlluminationRef} descriptionRef={moonDescriptionRef} />}
     {engraved && <text data-watch-engraving="true" x="320" y="510" fill={ink} textAnchor="middle" fontSize={engravingLength > 16 ? "6.4" : "7.5"} letterSpacing=".85">{initials && <tspan>{initials}</tspan>}{initials && signature && <tspan> · </tspan>}{signature && <tspan>{signature}</tspan>}</text>}
 
     {(chrono || regulator || smallSeconds) && <g fill={design.accentColor}>
