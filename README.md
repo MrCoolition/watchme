@@ -2,6 +2,20 @@
 
 A private, dial-first watch collection and design studio. Twelve original live watches, curated customization, saved collections, chronograph, countdown, dual time, weather, and a distraction-free display.
 
+## Parts catalog
+
+Open **Parts catalog** from the studio to explore all **1,311 options across 30 categories** from `Mens_Watch_Options_Master_Catalog.xlsx`, plus its 30 compatibility terms. Search descriptions, filter by category and availability in the app, inspect source notes, and apply supported options to the live design. The catalog payload loads on demand.
+
+An additional 120 specifications separate bezel attributes from seconds indication, placement and motion, for **1,431 entries in 32 categories**. There are **401 actionable entries**: 346 appearance choices, 40 entries connected to working complications, and 15 connected to tools. Some entries share a rendered appearance; each action names the result. The expanded renderer supports nine case shapes, twelve material appearances, 24 dial textures, twelve hand styles, eleven marker styles, nine straps, seven bezels, and refinements for finish, crystal, bracelet links, chapter rings, strap color and lume coverage.
+
+In **Signature & light**, seconds indication (running, stopwatch, none), placement (central, small, off-center, peripheral), motion (one-second tick, stepped sweep, continuous glide), and rate (4, 5, 6, 8, 10 or 16 advances per second) are independent. Software animation describes the visible motion, not a physical movement. Stopwatch seconds use elapsed time and remain still when paused; running seconds follow current time. Occupied registers are unavailable. Setting behavior (hacking, non-hacking, zero-reset) and advanced chronograph behavior (flyback, split seconds) are saved reference specifications; the actual stopwatch retains standard start/pause/reset and laps. Specialist retrograde and flying-seconds architectures remain references.
+
+**Day/date** follows the primary time zone. **Calendar** shows the day, weekday, month, year and ISO week, accounting for leap years and local midnight. Date and day/date share one window; calendar, moon phase, day/night and weather share the lower dial. Catalog actions explain conflicts before replacing any active function.
+
+Physical mechanisms, sensor capabilities, material specifications and certifications that the app does not implement are explicitly labeled **Reference only**. Save up to 40 references with each design; they participate in undo, local draft recovery and saved collection persistence without claiming the corresponding hardware. Applying parts and saving references both require **Save** to update the collection. Existing saved watches retain their previous appearance.
+
+To reproduce the source data, run `python scripts/import-watch-catalog.py /path/to/Mens_Watch_Options_Master_Catalog.xlsx`. The importer uses Python's standard library and records the workbook SHA-256, sheet names and source row for each entry. It does not modify the workbook. Keep the row-based IDs stable when updating this catalog, since saved watches reference them.
+
 ## The Black Label collection
 
 Five flagships join REACTOR, each with its own layered dial artwork and functional complication:

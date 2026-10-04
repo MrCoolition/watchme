@@ -49,6 +49,36 @@ async function assertMoonPhase(verifiedPage) {
   assert.ok(moon.description?.includes('% illuminated'), 'Moon accessibility description must contain the measured percentage.');
 }
 
+async function configureCatalog(verifiedPage) {
+  await verifiedPage.getByRole('button', { name: 'Parts catalog', exact: true }).first().click();
+  await verifiedPage.getByRole('button', { name: 'All entries 1,431', exact: true }).waitFor();
+  for (const option of ['Bronze / CuSn alloy', 'Cathedral', 'Precisionist / 16 advances per second', 'Peripheral']) {
+    await verifiedPage.getByLabel('Search catalog', { exact: true }).fill(option);
+    await verifiedPage.getByRole('button', { name: `View ${option}`, exact: true }).click();
+    await verifiedPage.getByRole('button', { name: 'Apply catalog option', exact: true }).click();
+    await verifiedPage.locator('.catalog-success').waitFor();
+  }
+  await verifiedPage.getByLabel('Search catalog', { exact: true }).fill('ECG recording app');
+  await verifiedPage.getByRole('button', { name: 'View ECG recording app', exact: true }).click();
+  assert.equal(await verifiedPage.getByRole('button', { name: 'Apply catalog option', exact: true }).count(), 0);
+  await verifiedPage.getByRole('button', { name: 'Save catalog reference', exact: true }).click();
+  await verifiedPage.getByRole('button', { name: 'Saved references 1', exact: true }).waitFor();
+  await verifiedPage.getByRole('button', { name: 'Close dialog', exact: true }).click();
+}
+
+async function assertCatalog(verifiedPage) {
+  assert.equal(await verifiedPage.locator('.watch-stage svg').getAttribute('data-metal'), 'bronze');
+  assert.equal(await verifiedPage.locator('.watch-stage [data-part-hand="cathedral"]').count(), 2);
+  const seconds = verifiedPage.locator('.watch-stage [data-seconds-hand]');
+  assert.equal(await seconds.count(), 1);
+  assert.equal(await seconds.getAttribute('data-seconds-placement'), 'peripheral');
+  assert.equal(await seconds.getAttribute('data-seconds-advances'), '16');
+  await verifiedPage.getByRole('button', { name: 'Parts catalog', exact: true }).first().click();
+  await verifiedPage.getByRole('button', { name: 'Saved references 1', exact: true }).click();
+  await verifiedPage.getByRole('button', { name: 'View ECG recording app', exact: true }).waitFor();
+  await verifiedPage.getByRole('button', { name: 'Close dialog', exact: true }).click();
+}
+
 try {
   await page.goto(config.accessUrl || config.url, { waitUntil: 'networkidle', timeout: 60000 });
   await page.getByLabel('YOUR PRIVATE PASSPHRASE', { exact: true }).waitFor({ timeout: 30000 });
@@ -81,6 +111,7 @@ try {
   await page.getByLabel('Dial signature', { exact: true }).fill('NIGHT SHIFT');
   await page.getByLabel('Engraved initials', { exact: true }).fill('WM');
   await page.getByRole('combobox', { name: 'Seconds motion', exact: true }).selectOption('tick');
+  await configureCatalog(page);
   await page.getByRole('button', { name: 'Add to collection', exact: true }).click();
   await page.getByLabel('Watch name', { exact: true }).fill(fixtureName);
   await page.getByRole('button', { name: 'Save watch', exact: true }).click();
@@ -89,6 +120,7 @@ try {
   await page.getByRole('dialog').waitFor({ state: 'hidden' });
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: fixtureName, exact: true }).waitFor();
+  await assertCatalog(page);
   await page.getByRole('button', { name: 'Favorite', exact: true }).click();
   await page.getByRole('button', { name: 'Favorited', exact: true }).waitFor();
   assert.ok(await page.locator('.watch-stage svg').getByText('NIGHT SHIFT', { exact: true }).count());
@@ -161,6 +193,7 @@ try {
       await secondPage.locator(`.watch-stage [data-complication="${complication}"]`).waitFor();
     }
     await assertMoonPhase(secondPage);
+    await assertCatalog(secondPage);
     assert.ok(await secondPage.locator('.watch-stage svg').getByText('NIGHT SHIFT', { exact: true }).count());
     stage = 'exporting the persisted lunar edition';
     await secondPage.getByRole('button', { name: 'Download edition card', exact: true }).click();
@@ -199,7 +232,7 @@ try {
   await page.getByRole('button', { name: 'Back to the studio', exact: true }).click();
   await page.waitForFunction(() => !document.fullscreenElement);
   assert.deepEqual(runtimeErrors, [], 'The deployed page produced a runtime error.');
-  console.log(`PASS: ${config.schema} deployed session, private APIs, lower-dial engraving, real chronograph controls, Eclipse, independent focus panels, four-complication save/reload/favorite, second-browser persistence and PNG export, live weather, focus, and mobile face-first layout.`);
+  console.log(`PASS: ${config.schema} deployed session, private APIs, catalog apply and references, new parts and independent seconds, lower-dial engraving, real chronograph controls, Eclipse, independent focus panels, four-complication save/reload/favorite, second-browser Neon persistence and PNG export, live weather, focus, and mobile face-first layout.`);
 } catch (error) {
   console.error(`Remote verification failed while ${stage}. Credentials and private URLs omitted.`);
   console.error(String(error?.message || error).replace(/https?:\/\/\S+/g, '[private URL omitted]').slice(0, 2200));

@@ -45,7 +45,7 @@ test("atelier finishes, inscription, lume, and movement survive save and reopen"
   await page.getByRole("button", { name: "Redo change", exact: true }).click();
   await expect(page.getByRole("button", { name: "Black ceramic", exact: true })).toHaveAttribute("aria-pressed", "true");
   const signatureSection = page.locator("details").filter({ has: page.locator("summary").filter({ hasText: "Signature & light" }) });
-  if (!await signatureSection.evaluate(element => (element as HTMLDetailsElement).open)) await signatureSection.locator("summary").click();
+  if (!await signatureSection.evaluate(element => (element as HTMLDetailsElement).open)) await signatureSection.locator(":scope > summary").click();
   await page.getByRole("combobox", { name: "Bezel", exact: true }).selectOption("iced");
   await page.getByLabel("Dial signature", { exact: true }).fill("NIGHT SHIFT");
   await page.getByRole("combobox", { name: "Seconds motion", exact: true }).selectOption("tick");

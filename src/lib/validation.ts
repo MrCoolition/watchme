@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ACTIVE_COMPLICATIONS, isCompatibleDesign, isValidInitials, isValidSignature, MAX_ACTIVE_COMPLICATIONS, PARTS, PRESETS, WATCH_FAMILIES } from "./presets";
+import { ACTIVE_COMPLICATIONS, isCatalogReference, isCompatibleDesign, isValidInitials, isValidSignature, MAX_ACTIVE_COMPLICATIONS, MAX_CATALOG_REFERENCES, PARTS, PRESETS, WATCH_FAMILIES } from "./presets";
 
 export const familySchema = z.enum(WATCH_FAMILIES);
 const colorSchema = z.string().regex(/^#[a-f0-9]{6}$/i);
@@ -19,6 +19,18 @@ export const designSchema = z.object({
   signature: z.string().refine(isValidSignature, "Use up to 14 visible characters for your signature.").optional(),
   initials: z.string().refine(isValidInitials, "Use up to 4 visible characters for your initials.").optional(),
   secondsMotion: z.enum(PARTS.secondsMotions).optional(),
+  secondsIndication: z.enum(PARTS.secondsIndications).optional(),
+  secondsPlacement: z.enum(PARTS.secondsPlacements).optional(),
+  secondsAdvances: z.union(PARTS.secondsAdvances.map(value => z.literal(value))).optional(),
+  secondsSetting: z.enum(PARTS.secondsSettings).optional(),
+  chronographBehavior: z.enum(PARTS.chronographBehaviors).optional(),
+  caseFinish: z.enum(PARTS.caseFinishes).optional(),
+  braceletStyle: z.enum(PARTS.braceletStyles).optional(),
+  chapterRing: z.enum(PARTS.chapterRings).optional(),
+  crystalStyle: z.enum(PARTS.crystalStyles).optional(),
+  lumeStyle: z.enum(PARTS.lumeStyles).optional(),
+  strapColor: colorSchema.optional(),
+  catalogReferences: z.array(z.string().refine(isCatalogReference, "Choose a reference from the watch catalog.")).max(MAX_CATALOG_REFERENCES).optional(),
 }).strict().refine(isCompatibleDesign, "Choose up to four distinct complications that fit this case and dial layout.");
 export const watchInputSchema = z.object({ id: z.uuid().optional(), name: z.string().trim().min(1).max(60), design: designSchema }).strict();
 const timezoneSchema = z.string().max(100).refine((value) => {

@@ -7,18 +7,28 @@ export function isFlagshipFamily(family: string): boolean {
 
 export const WATCH_FAMILIES = ["monolith", "pelagic", "apex", "vesper", "meridian", "orbit", ...FLAGSHIP_FAMILIES] as const satisfies readonly WatchFamily[];
 
-export const ACTIVE_COMPLICATIONS = ["date", "gmt", "chronograph", "weather", "regulator", "daynight", "moonphase"] as const satisfies readonly ActiveComplication[];
+export const ACTIVE_COMPLICATIONS = ["date", "gmt", "chronograph", "weather", "regulator", "daynight", "moonphase", "daydate", "calendar"] as const satisfies readonly ActiveComplication[];
 export const MAX_ACTIVE_COMPLICATIONS = 4;
 
 export const PARTS = {
-  caseShapes: ["octagonal", "cushion", "tonneau", "round"],
-  metals: ["steel", "titanium", "gold", "rose", "graphite", "ceramic"],
-  textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche", "mechanical", "turbine", "solar", "abyssal", "prismatic", "aventurine"],
-  bezels: ["polished", "fluted", "iced", "ceramic"],
-  secondsMotions: ["sweep", "tick"],
-  hands: ["baton", "sword", "dauphine", "skeleton"],
-  markers: ["baton", "roman", "arabic", "minimal"],
-  straps: ["bracelet", "leather", "rubber"],
+  caseShapes: ["octagonal", "cushion", "tonneau", "round", "square", "rectangle", "hexagonal", "oval", "shield"],
+  metals: ["steel", "titanium", "gold", "rose", "graphite", "ceramic", "bronze", "platinum", "silver", "whitegold", "carbon", "sapphire"],
+  textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche", "mechanical", "turbine", "solar", "abyssal", "prismatic", "aventurine", "motherofpearl", "malachite", "lapis", "marble", "linen", "honeycomb", "wave", "fume", "enamel", "sand"],
+  bezels: ["polished", "fluted", "iced", "ceramic", "coined", "scalloped", "screws"],
+  secondsMotions: ["sweep", "tick", "stepped"],
+  secondsIndications: ["running", "chronograph", "none"],
+  secondsPlacements: ["central", "small", "off-center", "peripheral"],
+  secondsAdvances: [4, 5, 6, 8, 10, 16],
+  secondsSettings: ["hacking", "non-hacking", "zero-reset"],
+  chronographBehaviors: ["standard", "flyback", "split"],
+  hands: ["baton", "sword", "dauphine", "skeleton", "leaf", "breguet", "syringe", "cathedral", "arrow", "lollipop", "snowflake", "mercedes"],
+  markers: ["baton", "roman", "arabic", "minimal", "dots", "triangles", "diamonds", "explorer", "california", "breguet", "none"],
+  straps: ["bracelet", "leather", "rubber", "nato", "mesh", "rally", "alligator", "sailcloth", "braided"],
+  caseFinishes: ["polished", "brushed", "blasted", "hammered", "damascus"],
+  braceletStyles: ["three-link", "five-link", "beads-of-rice", "engineer"],
+  chapterRings: ["minute", "railroad", "dots", "tachymeter", "none"],
+  crystalStyles: ["clear", "domed", "smoked", "faceted"],
+  lumeStyles: ["standard", "full-dial", "hands-only", "none"],
   complications: [...ACTIVE_COMPLICATIONS, "none"],
 } as const;
 
@@ -102,7 +112,7 @@ function isActiveComplication(value: unknown): value is ActiveComplication {
   return typeof value === "string" && (ACTIVE_COMPLICATIONS as readonly string[]).includes(value);
 }
 
-const LOWER_DIAL_COMPLICATIONS: readonly ActiveComplication[] = ["weather", "daynight", "moonphase"];
+const LOWER_DIAL_COMPLICATIONS: readonly ActiveComplication[] = ["weather", "daynight", "moonphase", "calendar"];
 
 /** Primary first, followed by additional functions in their saved order. */
 export function getComplications(design: WatchDesign): ActiveComplication[] {
@@ -121,15 +131,16 @@ function conflictWithActive(caseShape: WatchDesign["caseShape"], active: readonl
   if (!isComplicationCompatible(caseShape, candidate)) {
     return candidate === "regulator"
       ? "The regulator requires a round case."
-      : "The chronograph requires an octagonal, cushion or tonneau case.";
+      : "The chronograph requires a non-round case.";
   }
   if (LOWER_DIAL_COMPLICATIONS.includes(candidate)) {
     if (active.includes("regulator")) return "The regulator already occupies the lower dial.";
-    if (active.some(type => LOWER_DIAL_COMPLICATIONS.includes(type))) return "Moon phase, day/night and weather share the lower dial. Choose one.";
+    if (active.some(type => LOWER_DIAL_COMPLICATIONS.includes(type))) return "Moon phase, day/night, calendar and weather share the lower dial. Choose one.";
   }
   if (candidate === "regulator" && active.some(type => LOWER_DIAL_COMPLICATIONS.includes(type))) {
-    return "The regulator needs the lower dial used by moon phase, day/night or weather.";
+    return "The regulator needs the lower dial used by moon phase, day/night, calendar or weather.";
   }
+  if ((candidate === "date" && active.includes("daydate")) || (candidate === "daydate" && active.includes("date"))) return "Date and day/date share the calendar window. Choose one.";
   if (active.length >= MAX_ACTIVE_COMPLICATIONS) return "A watch supports up to four complications.";
   return null;
 }
@@ -138,7 +149,22 @@ function conflictWithActive(caseShape: WatchDesign["caseShape"], active: readonl
 export function complicationConflict(design: WatchDesign, candidate: Complication): string | null {
   if (candidate === "none") return null;
   if (!isActiveComplication(candidate)) return "Choose a valid complication.";
-  return conflictWithActive(design.caseShape, getComplications(design), candidate);
+  const active = getComplications(design);
+  if (!active.includes(candidate) && design.secondsIndication !== "none") {
+    if (design.secondsPlacement === "small" && (LOWER_DIAL_COMPLICATIONS.includes(candidate) || candidate === "regulator")) return "Small seconds already occupies the lower dial. Choose central or peripheral seconds first.";
+    if (design.secondsPlacement === "off-center" && (candidate === "chronograph" || candidate === "regulator")) return "Off-center seconds shares a register with this function. Choose central or peripheral seconds first.";
+  }
+  return conflictWithActive(design.caseShape, active, candidate);
+}
+
+/** Separate seconds choices still need an available register and a real elapsed-time source. */
+export function secondsConflict(design: WatchDesign): string | null {
+  if (design.secondsIndication === "none") return null;
+  const active = getComplications(design);
+  if (design.secondsIndication === "chronograph" && !active.includes("chronograph")) return "Add the chronograph complication before choosing stopwatch seconds.";
+  if (design.secondsPlacement === "small" && active.some(type => LOWER_DIAL_COMPLICATIONS.includes(type) || type === "regulator")) return "Small seconds needs the lower dial. Remove its current function or choose another placement.";
+  if (design.secondsPlacement === "off-center" && active.some(type => type === "chronograph" || type === "regulator")) return "Off-center seconds shares a register with the chronograph or regulator. Choose another placement.";
+  return null;
 }
 
 function hasCompatibleComplications(design: WatchDesign): boolean {
@@ -172,6 +198,18 @@ export function isValidInitials(value: unknown): value is string {
   return isValidSignature(value) && [...value].length <= 4;
 }
 
+export const MAX_CATALOG_REFERENCES = 40;
+/** Stable workbook row IDs and the separately versioned user-supplied supplement. */
+export function isCatalogReference(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  if (value.startsWith("spec-")) {
+    const item = Number(value.slice(5));
+    return Number.isInteger(item) && item >= 1 && item <= 120 && value === `spec-${item}`;
+  }
+  const row = Number(value.slice(8));
+  return Number.isInteger(row) && row >= 9 && row <= 1319 && value === `catalog-${row}`;
+}
+
 export function isCompatibleDesign(design: WatchDesign): boolean {
   if (!design || typeof design !== "object" || design.version !== 1) return false;
   return PRESETS.some((preset) => preset.id === design.family)
@@ -189,6 +227,19 @@ export function isCompatibleDesign(design: WatchDesign): boolean {
     && (design.signature === undefined || isValidSignature(design.signature))
     && (design.initials === undefined || isValidInitials(design.initials))
     && (design.secondsMotion === undefined || (PARTS.secondsMotions as readonly string[]).includes(design.secondsMotion))
+    && (design.caseFinish === undefined || (PARTS.caseFinishes as readonly string[]).includes(design.caseFinish))
+    && (design.braceletStyle === undefined || (PARTS.braceletStyles as readonly string[]).includes(design.braceletStyle))
+    && (design.chapterRing === undefined || (PARTS.chapterRings as readonly string[]).includes(design.chapterRing))
+    && (design.crystalStyle === undefined || (PARTS.crystalStyles as readonly string[]).includes(design.crystalStyle))
+    && (design.lumeStyle === undefined || (PARTS.lumeStyles as readonly string[]).includes(design.lumeStyle))
+    && (design.strapColor === undefined || (typeof design.strapColor === "string" && /^#[a-f\d]{6}$/i.test(design.strapColor)))
+    && (design.catalogReferences === undefined || (Array.isArray(design.catalogReferences) && design.catalogReferences.length <= MAX_CATALOG_REFERENCES && Array.from(design.catalogReferences).every(isCatalogReference) && new Set(design.catalogReferences).size === design.catalogReferences.length))
+    && (design.secondsIndication === undefined || (PARTS.secondsIndications as readonly string[]).includes(design.secondsIndication))
+    && (design.secondsPlacement === undefined || (PARTS.secondsPlacements as readonly string[]).includes(design.secondsPlacement))
+    && (design.secondsAdvances === undefined || (PARTS.secondsAdvances as readonly number[]).includes(design.secondsAdvances))
+    && (design.secondsSetting === undefined || (PARTS.secondsSettings as readonly string[]).includes(design.secondsSetting))
+    && (design.chronographBehavior === undefined || (PARTS.chronographBehaviors as readonly string[]).includes(design.chronographBehavior))
+    && !secondsConflict(design)
     && hasCompatibleComplications(design);
 }
 
@@ -213,6 +264,18 @@ export function normalizeDesign(design: WatchDesign): WatchDesign {
   if (design?.signature !== undefined && isValidSignature(design.signature)) normalized.signature = design.signature;
   if (design?.initials !== undefined && isValidInitials(design.initials)) normalized.initials = design.initials;
   if (design?.secondsMotion !== undefined && (PARTS.secondsMotions as readonly string[]).includes(design.secondsMotion)) normalized.secondsMotion = design.secondsMotion;
+  if (design?.secondsIndication !== undefined && (PARTS.secondsIndications as readonly string[]).includes(design.secondsIndication)) normalized.secondsIndication = design.secondsIndication;
+  if (design?.secondsPlacement !== undefined && (PARTS.secondsPlacements as readonly string[]).includes(design.secondsPlacement)) normalized.secondsPlacement = design.secondsPlacement;
+  if (design?.secondsAdvances !== undefined && (PARTS.secondsAdvances as readonly number[]).includes(design.secondsAdvances)) normalized.secondsAdvances = design.secondsAdvances;
+  if (design?.secondsSetting !== undefined && (PARTS.secondsSettings as readonly string[]).includes(design.secondsSetting)) normalized.secondsSetting = design.secondsSetting;
+  if (design?.chronographBehavior !== undefined && (PARTS.chronographBehaviors as readonly string[]).includes(design.chronographBehavior)) normalized.chronographBehavior = design.chronographBehavior;
+  if (design?.caseFinish !== undefined && (PARTS.caseFinishes as readonly string[]).includes(design.caseFinish)) normalized.caseFinish = design.caseFinish;
+  if (design?.braceletStyle !== undefined && (PARTS.braceletStyles as readonly string[]).includes(design.braceletStyle)) normalized.braceletStyle = design.braceletStyle;
+  if (design?.chapterRing !== undefined && (PARTS.chapterRings as readonly string[]).includes(design.chapterRing)) normalized.chapterRing = design.chapterRing;
+  if (design?.crystalStyle !== undefined && (PARTS.crystalStyles as readonly string[]).includes(design.crystalStyle)) normalized.crystalStyle = design.crystalStyle;
+  if (design?.lumeStyle !== undefined && (PARTS.lumeStyles as readonly string[]).includes(design.lumeStyle)) normalized.lumeStyle = design.lumeStyle;
+  if (typeof design?.strapColor === "string" && /^#[a-f\d]{6}$/i.test(design.strapColor)) normalized.strapColor = design.strapColor;
+  if (Array.isArray(design?.catalogReferences)) normalized.catalogReferences = [...new Set(design.catalogReferences.filter(isCatalogReference))].slice(0, MAX_CATALOG_REFERENCES);
   const active: ActiveComplication[] = [];
   // Selecting None clears the full layout. If only the case changed, preserve valid extras
   // and promote the first surviving function when the old primary no longer fits.
@@ -225,5 +288,7 @@ export function normalizeDesign(design: WatchDesign): WatchDesign {
   normalized.complication = active[0] ?? "none";
   if (active.length > 1) normalized.additionalComplications = active.slice(1);
   else if (Array.isArray(design?.additionalComplications) && design.additionalComplications.length === 0) normalized.additionalComplications = [];
+  if (normalized.secondsIndication === "chronograph" && !active.includes("chronograph")) normalized.secondsIndication = "running";
+  if (secondsConflict(normalized)) normalized.secondsPlacement = "central";
   return normalized;
 }

@@ -72,7 +72,7 @@ test("engravings occupy one clear lower-dial footer across standard, mechanical 
     await page.getByRole("button", { name: `Select ${name}`, exact: true }).click();
     await page.getByRole("button", { name: "Design studio", exact: true }).first().click();
     const section = page.locator("details").filter({ has: page.locator("summary").filter({ hasText: "Signature & light" }) });
-    if (!(await section.evaluate(element => element.hasAttribute("open")))) await section.locator("summary").click();
+    if (!(await section.evaluate(element => element.hasAttribute("open")))) await section.locator(":scope > summary").click();
     await page.getByLabel("Dial signature", { exact: true }).fill("LUNAR EDITION");
     await page.getByLabel("Engraved initials", { exact: true }).fill("WM");
     if (name === "NOCTURNE") {

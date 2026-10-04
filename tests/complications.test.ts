@@ -40,11 +40,12 @@ describe("multiple complications in version-one watch designs", () => {
   it.each(PARTS.caseShapes)("checks every complication combination on a %s case, regardless of primary order", caseShape => {
     for (let mask = 0; mask < 2 ** ACTIVE_COMPLICATIONS.length; mask += 1) {
       const list = ACTIVE_COMPLICATIONS.filter((_, index) => mask & (1 << index));
-      const lowerCount = list.filter(type => ["moonphase", "daynight", "weather"].includes(type)).length;
+      const lowerCount = list.filter(type => ["moonphase", "daynight", "weather", "calendar"].includes(type)).length;
       const expected = list.length <= 4
         && !(list.includes("chronograph") && caseShape === "round")
         && !(list.includes("regulator") && caseShape !== "round")
         && lowerCount <= 1
+        && !(list.includes("date") && list.includes("daydate"))
         && !(list.includes("regulator") && lowerCount > 0);
       for (const ordered of [list, list.toReversed()]) {
         const design = withComplications(ordered, caseShape);

@@ -132,7 +132,7 @@ test("a case change prevents a chronograph from overlapping an incompatible roun
   await page.getByRole("combobox", { name: "Architecture", exact: true }).selectOption("round");
   await page.locator("summary").filter({ hasText: "Strap & function" }).click();
   await expect(page.getByRole("combobox", { name: "Complication", exact: true })).toHaveValue("none");
-  await expect(page.getByRole("option", { name: /Chronograph/ })).toHaveJSProperty("disabled", true);
+  await expect(page.getByRole("combobox", { name: "Complication", exact: true }).getByRole("option", { name: /Chronograph/ })).toHaveJSProperty("disabled", true);
   await collection(page);
   await expect(page.getByText("Time only", { exact: true })).toBeVisible();
 });

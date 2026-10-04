@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildEditionCardSvg, editionFilename, editionFingerprint, editionInitials, editionSpecs, editionTitle, escapeXml } from "../src/lib/edition-card";
-import { PRESETS, isFlagshipFamily } from "../src/lib/presets";
+import { buildEditionCardSvg, editionFilename, editionFingerprint, editionFunctions, editionInitials, editionSeconds, editionSpecs, editionTitle, escapeXml } from "../src/lib/edition-card";
+import { PARTS, PRESETS, isFlagshipFamily } from "../src/lib/presets";
 import type { WatchDesign } from "../src/lib/types";
 
 const design = PRESETS[0].design;
@@ -58,5 +58,99 @@ describe("edition card artwork", () => {
       expect(artwork).not.toContain("LIMITED");
       expect(artwork.includes("BLACK LABEL")).toBe(isFlagshipFamily(preset.id));
     }
+  });
+
+  it("exports readable descriptions for every supported material and visual part", () => {
+    const registries = {
+      metal: PARTS.metals, caseShape: PARTS.caseShapes, texture: PARTS.textures,
+      hands: PARTS.hands, markers: PARTS.markers, bezel: PARTS.bezels, strap: PARTS.straps,
+      caseFinish: PARTS.caseFinishes, braceletStyle: PARTS.braceletStyles,
+      chapterRing: PARTS.chapterRings, crystalStyle: PARTS.crystalStyles, lumeStyle: PARTS.lumeStyles,
+    };
+    for (const [field, options] of Object.entries(registries)) for (const option of options) {
+      const customized = { ...design, [field]: option } as WatchDesign;
+      const specs = editionSpecs(customized);
+      expect(specs.every(spec => Boolean(spec.label && spec.value)), `${field}: ${option}`).toBe(true);
+      const artwork = buildEditionCardSvg({ design: customized, name: "Catalog edition", watchSvg: "<svg/>" });
+      expect(artwork, `${field}: ${option}`).not.toContain("undefined");
+      expect(artwork, `${field}: ${option}`).not.toContain("[object Object]");
+    }
+  });
+
+  it("describes optional finish, hands, markers, crystal, track and band color without dropping the main specifications", () => {
+    const customized: WatchDesign = {
+      ...design, metal: "whitegold", caseShape: "rectangle", caseFinish: "hammered",
+      texture: "motherofpearl", hands: "leaf", markers: "breguet", bezel: "coined",
+      crystalStyle: "domed", chapterRing: "railroad", strap: "bracelet", braceletStyle: "beads-of-rice", strapColor: "#a1b2c3",
+    };
+    expect(editionSpecs(customized)).toEqual([
+      { label: "CASE / FINISH", value: "White gold tone", detail: "Rectangular · Hammered" },
+      { label: "DIAL", value: "Mother-of-pearl", detail: "Leaf · Breguet numerals" },
+      { label: "BEZEL", value: "Coin-edge", detail: "Domed crystal · Railroad track" },
+      { label: "STRAP", value: "Beads-of-rice bracelet", detail: "Color #A1B2C3" },
+    ]);
+    const artwork = buildEditionCardSvg({ design: customized, name: "Pearl", watchSvg: "<svg/>" });
+    expect(artwork).toContain("MOTHER-OF-PEARL");
+    expect(artwork).not.toContain("MOTHEROFPEARL");
+    expect(artwork).toContain("Rectangular · Hammered");
+  });
+
+  it("includes the full active complication set and luminous treatment in the export", () => {
+    const customized: WatchDesign = { ...design, complication: "chronograph", additionalComplications: ["daydate", "gmt", "calendar"], lumeStyle: "full-dial" };
+    expect(editionFunctions(customized)).toBe("Chronograph · Day / date · GMT · Calendar / Full-dial lume");
+    const artwork = buildEditionCardSvg({ design: customized, name: "Calendar machine", watchSvg: "<svg/>" });
+    expect(artwork).toContain("FUNCTIONS");
+    expect(artwork).toContain(editionFunctions(customized));
+    expect(editionFunctions({ ...design, complication: "none", lumeStyle: "none" })).toBe("Time only / No lume");
+    for (const complication of PARTS.complications) expect(editionFunctions({ ...design, complication })).not.toContain("undefined");
+  });
+
+  it("does not describe saved catalog references as hardware capabilities or alter absent finishing fields", () => {
+    const referenceDesign: WatchDesign = { ...design, catalogReferences: ["catalog-1309", "catalog-1310"] };
+    const artwork = buildEditionCardSvg({ design: referenceDesign, name: "Reference study", watchSvg: "<svg/>" });
+    expect(artwork).not.toMatch(/COSC|Certified|METAS|water resistance/i);
+    expect(editionSpecs(referenceDesign)).toEqual(editionSpecs(design));
+    expect(editionSpecs(design)[0].detail).toBe("Octagonal");
+    expect(editionSpecs(design)[2].detail).toBe("");
+    expect(editionSpecs({ ...design, strap: "leather", braceletStyle: "engineer" })[3].value).toBe("Leather strap");
+  });
+
+  it("describes software seconds source, placement and rate without claiming setting mechanics", () => {
+    const customized: WatchDesign = { ...design, complication: "chronograph", secondsIndication: "chronograph", secondsPlacement: "peripheral", secondsMotion: "stepped", secondsAdvances: 16, secondsSetting: "zero-reset", chronographBehavior: "flyback" };
+    expect(editionSeconds(customized)).toBe("ELAPSED / PERIPHERAL / 16 ADVANCES/S");
+    expect(editionSeconds({ ...customized, secondsIndication: "none" })).toBe("SECONDS HIDDEN");
+    expect(editionSeconds({ ...design, secondsIndication: "running", secondsPlacement: "small", secondsMotion: "tick" })).toBe("RUNNING / SMALL / TICK");
+    const artwork = buildEditionCardSvg({ design: customized, name: "Sixteen", watchSvg: "<svg/>" });
+    expect(artwork).toContain("ELAPSED / PERIPHERAL / 16 ADVANCES/S");
+    expect(artwork).not.toMatch(/flyback|zero.reset|262\s*kHz/i);
+  });
+
+  it("matches the renderer's elapsed source when only a chronograph watch's seconds placement is customized", () => {
+    const reactor = PRESETS.find(preset => preset.id === "reactor")!.design;
+    const peripheral: WatchDesign = { ...reactor, secondsPlacement: "peripheral" };
+    expect(editionSeconds(peripheral)).toBe("ELAPSED / PERIPHERAL / GLIDE");
+    expect(editionSeconds({ ...peripheral, secondsIndication: "running" })).toBe("RUNNING / PERIPHERAL / GLIDE");
+    expect(editionSeconds({ ...peripheral, complication: "date", additionalComplications: ["chronograph"] })).toBe("ELAPSED / PERIPHERAL / GLIDE");
+    expect(editionSeconds({ ...design, secondsPlacement: "peripheral" })).toBe("RUNNING / PERIPHERAL / GLIDE");
+    expect(buildEditionCardSvg({ design: peripheral, name: "Peripheral Reactor", watchSvg: "<svg/>" })).toContain("DAYLIGHT / ELAPSED / PERIPHERAL / GLIDE");
+  });
+
+  it("keeps long part details within the specification columns while retaining every selected detail", () => {
+    const customized: WatchDesign = {
+      ...design, metal: "sapphire", caseShape: "rectangle", caseFinish: "damascus",
+      texture: "motherofpearl", hands: "mercedes", markers: "california", bezel: "screws",
+      crystalStyle: "faceted", chapterRing: "railroad", strap: "bracelet", braceletStyle: "beads-of-rice", strapColor: "#a1b2c3",
+      complication: "chronograph", additionalComplications: ["daydate", "gmt", "moonphase"], lumeStyle: "standard",
+      secondsPlacement: "peripheral", secondsMotion: "stepped", secondsAdvances: 16,
+    };
+    const artwork = buildEditionCardSvg({ design: customized, name: "Complete specification", watchSvg: "<svg/>" });
+    expect(artwork).toContain('textLength="200" lengthAdjust="spacingAndGlyphs">Mercedes-style · California numerals</text>');
+    expect(artwork).not.toContain('textLength="215"');
+    for (const spec of editionSpecs(customized)) {
+      expect(artwork).toContain(escapeXml(spec.value));
+      expect(artwork).toContain(escapeXml(spec.detail));
+    }
+    expect(artwork).toContain(escapeXml(editionFunctions(customized)));
+    expect(artwork).toContain("DAYLIGHT / ELAPSED / PERIPHERAL / 16 ADVANCES/S");
   });
 });
