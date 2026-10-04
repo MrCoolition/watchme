@@ -99,3 +99,14 @@ test("flagship titles and display controls fit desktop and tablet full-watch lay
     }
   }
 });
+
+test("all five flagships expose an unobscured focus button on the narrowest phone", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+  for (const [name] of flagships) {
+    await page.getByRole("button", { name: `Select ${name}`, exact: true }).click();
+    const focus = page.getByRole("button", { name: "Front & center", exact: true });
+    await expect(focus).toBeInViewport({ ratio: 1 });
+    await focus.click({ trial: true });
+  }
+});

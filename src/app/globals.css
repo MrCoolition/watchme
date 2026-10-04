@@ -138,6 +138,7 @@
   .collection-tabs > .favorites-filter { display: flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; margin-left: auto; padding-left: 0; }
   .collection-scroll-hint { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 7px; font-size: 7px; letter-spacing: .8px; color: #849173; }
   .watch-collection { grid-auto-columns: 152px; }
+  .is-flagship .mobile-design-actions:not(:has(.mobile-save-design)) { display: none; }
   .card-copy > small { font-size: 6px; letter-spacing: .7px; }
   .is-flagship .focus-header .eyebrow { letter-spacing: 1px; font-size: 7px; white-space: nowrap; }
 }
