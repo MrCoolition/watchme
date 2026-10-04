@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useId, useRef } from "react";
 import type { CSSProperties } from "react";
 import type { WatchDesign, WeatherData } from "@/lib/types";
-import { getClockParts, getHandAngles } from "@/lib/time";
+import { getClockParts, getDayNightState, getHandAngles } from "@/lib/time";
 import { MechanicalMovement } from "@/components/mechanical-movement";
+import { FlagshipDialArtwork } from "@/components/flagship-dials";
 
 export interface WatchFaceProps {
   design: WatchDesign;
@@ -75,6 +76,8 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
   const subMinuteRef = useRef<SVGGElement>(null);
   const subSecondRef = useRef<SVGGElement>(null);
   const dateRef = useRef<SVGTextElement>(null);
+  const dayNightDiscRef = useRef<SVGGElement>(null);
+  const dayNightLabelRef = useRef<SVGTextElement>(null);
   const accessibleTimeRef = useRef<SVGDescElement>(null);
   const chronoRingRef = useRef<SVGCircleElement>(null);
   const elapsedRef = useRef(chronographElapsed);
@@ -91,7 +94,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
     let calendarSecond = -1;
     let primary = getClockParts(Date.now(), timezone);
     let secondary = getClockParts(Date.now(), secondaryTimezone);
-    const gears = Array.from(node.querySelectorAll<SVGGElement>("[data-mechanical-gear]")).map(gear => ({ node: gear, x: Number(gear.dataset.centerX), y: Number(gear.dataset.centerY), period: Number(gear.dataset.period), direction: Number(gear.dataset.direction), phase: Number(gear.dataset.phase) }));
+    const gears = Array.from(node.querySelectorAll<SVGGElement>("[data-mechanical-gear], [data-flagship-rotor], [data-flagship-kinetic]")).map(gear => ({ node: gear, x: Number(gear.dataset.centerX), y: Number(gear.dataset.centerY), period: Number(gear.dataset.period), direction: Number(gear.dataset.direction), phase: Number(gear.dataset.phase) }));
     const balance = node.querySelector<SVGGElement>("[data-balance-wheel]");
     const rotate = (ref: { current: SVGGElement | null }, angle: number, x = 320, y = 350) => ref.current?.setAttribute("transform", `rotate(${angle} ${x} ${y})`);
     function update() {
@@ -101,6 +104,13 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
         primary = getClockParts(now, timezone);
         secondary = getClockParts(now, secondaryTimezone);
         if (dateRef.current) dateRef.current.textContent = String(primary.day).padStart(2, "0");
+        if (dayNightDiscRef.current) {
+          const phase = getDayNightState(primary);
+          dayNightDiscRef.current.setAttribute("transform", `rotate(${phase.angle} 320 435)`);
+          dayNightDiscRef.current.setAttribute("data-daynight-hour", String(phase.hour));
+          dayNightDiscRef.current.setAttribute("data-daynight-state", phase.isDay ? "day" : "night");
+          if (dayNightLabelRef.current) dayNightLabelRef.current.textContent = phase.isDay ? "DAY · 24H" : "NIGHT · 24H";
+        }
         if (accessibleTimeRef.current) accessibleTimeRef.current.textContent = `${String(primary.hour).padStart(2, "0")}:${String(primary.minute).padStart(2, "0")}:${String(primary.second).padStart(2, "0")} ${timezone || "local time"}`;
       }
       const millis = live && !reduced.matches && design.secondsMotion !== "tick" ? now % 1000 : 0;
@@ -135,7 +145,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       stop();
       if (document.hidden || !visible) return;
       update();
-      if (live && !reduced.matches && (design.secondsMotion !== "tick" || design.texture === "mechanical")) frame = requestAnimationFrame(tick);
+      if (live && !reduced.matches && (design.secondsMotion !== "tick" || gears.length > 0)) frame = requestAnimationFrame(tick);
       else timer = setTimeout(start, live ? Math.max(16, 1000 - Date.now() % 1000) : 30000);
     }
     const observer = typeof IntersectionObserver !== "undefined" ? new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; start(); }, { rootMargin: "80px" }) : null;
@@ -153,13 +163,16 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
   const initials = design.initials ? Array.from(design.initials.trim().toUpperCase()).slice(0, 4).join("") : undefined;
   const illuminated = lume || eclipse;
   const mechanical = design.texture === "mechanical";
+  const flagship = ["reactor", "phantom", "helios", "abyss", "prism", "nocturne"].includes(design.family);
+  const flagshipTexture = ["turbine", "solar", "abyssal", "prismatic", "aventurine"].includes(design.texture);
   const lightX = Math.max(-1, Math.min(1, lightPosition?.x || 0));
   const lightY = Math.max(-1, Math.min(1, lightPosition?.y || 0));
-  const isLight = parseInt(design.dialColor.slice(1, 3), 16) > 145 && parseInt(design.dialColor.slice(3, 5), 16) > 145;
+  const isLight = design.texture === "prismatic" || (!flagshipTexture && parseInt(design.dialColor.slice(1, 3), 16) > 145 && parseInt(design.dialColor.slice(3, 5), 16) > 145);
   const ink = illuminated ? lumeColor : isLight ? "#26353E" : "#DCE4E3";
   const mutedInk = illuminated ? shade(lumeColor, 0.45) : isLight ? "#4D5D67" : "#A3B6B5";
   const chrono = design.complication === "chronograph";
   const regulator = design.complication === "regulator";
+  const dayNight = design.complication === "daynight";
   const gmt = design.complication === "gmt";
   const smallSeconds = design.family === "vesper" && design.complication === "none";
   const outline = casePath(design.caseShape);
@@ -178,7 +191,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
     <circle cx={x} cy={y} r="3.5" fill={metal.face} />
   </g>;
 
-  return <svg ref={rootRef} viewBox={framing === "dial" ? "128 158 384 384" : framing === "face" ? "82 96 508 508" : "0 0 640 720"} data-framing={framing} data-eclipse={eclipse} data-chronograph-running={chronographRunning} className={className} role={chrono && live && framing !== "dial" && (onChronographToggle || onChronographReset) ? "group" : "img"} aria-labelledby={`${id("title")} ${id("time")}`} style={{ overflow: "visible", width: "100%", height: "100%", maxHeight: "100%", display: "block", "--watch-accent": design.accentColor } as CSSProperties}>
+  return <svg ref={rootRef} viewBox={framing === "dial" ? "128 158 384 384" : framing === "face" ? "82 96 508 508" : "0 0 640 720"} data-framing={framing} data-flagship-family={flagship ? design.family : undefined} data-eclipse={eclipse} data-chronograph-running={chronographRunning} className={className} role={chrono && live && framing !== "dial" && (onChronographToggle || onChronographReset) ? "group" : "img"} aria-labelledby={`${id("title")} ${id("time")}`} style={{ overflow: "visible", width: "100%", height: "100%", maxHeight: "100%", display: "block", "--watch-accent": design.accentColor } as CSSProperties}>
     <title id={id("title")}>{`WATCHMÉ ${design.family} — ${design.metal} ${design.caseShape} watch`}</title>
     <desc id={id("time")} ref={accessibleTimeRef}>Live watch showing your selected time zone.</desc>
     <defs>
@@ -196,6 +209,8 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       <linearGradient id={id("leather")}><stop stopColor="#08090C" /><stop offset=".17" stopColor="#242024" /><stop offset=".50" stopColor="#131215" /><stop offset=".89" stopColor="#2A252A" /><stop offset="1" stopColor="#08090C" /></linearGradient>
       <radialGradient id={id("dial")} cx=".38" cy=".28" r=".82"><stop stopColor={shade(design.dialColor, 1.48)} /><stop offset=".47" stopColor={design.dialColor} /><stop offset="1" stopColor={shade(design.dialColor, isLight ? 0.67 : 0.27)} /></radialGradient>
       <radialGradient id={id("counter")}><stop stopColor={shade(design.dialColor, 0.8)} /><stop offset=".85" stopColor={shade(design.dialColor, 0.42)} /><stop offset="1" stopColor="#060B10" /></radialGradient>
+      <linearGradient id={id("daynight-day")} x1="0" y1="0" x2="0" y2="1"><stop stopColor={illuminated ? "#152D29" : "#6D5341"} /><stop offset="1" stopColor={illuminated ? "#061615" : "#C29B67"} /></linearGradient>
+      <linearGradient id={id("daynight-night")} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#080D22" /><stop offset="1" stopColor="#253551" /></linearGradient>
       <linearGradient id={id("crystal")} x1="0" y1="0" x2=".75" y2="1"><stop stopColor="white" stopOpacity=".11" /><stop offset=".32" stopColor="white" stopOpacity=".018" /><stop offset=".60" stopColor="white" stopOpacity="0" /><stop offset="1" stopColor="white" stopOpacity=".035" /></linearGradient>
       <radialGradient id={id("ambient")}><stop stopColor={design.accentColor} stopOpacity={lume ? ".12" : ".045"} /><stop offset="1" stopColor={design.accentColor} stopOpacity="0" /></radialGradient>
       <pattern id={id("grain")} width="2" height="3" patternUnits="userSpaceOnUse"><path d="M0 .5H2" stroke="white" strokeOpacity=".07" strokeWidth=".4" /><path d="M0 2H2" stroke="black" strokeOpacity=".11" strokeWidth=".4" /></pattern>
@@ -205,6 +220,8 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       <pattern id={id("meteorite")} width="112" height="96" patternUnits="userSpaceOnUse" patternTransform="rotate(17)"><path d="M0 4L111 72L109 80L0 17ZM8 96L67 0H78L21 96ZM0 71L111 26V36L0 83" fill="#DCE8F0" fillOpacity=".09" stroke="#E6F0F8" strokeOpacity=".13" strokeWidth=".7" /><path d="M0 12L112 80M0 8L112 76M0 20L112 88M4 96L64 0M13 96L73 0M19 96L79 0M0 65L112 21M0 75L112 31M0 80L112 36" stroke="#000712" strokeOpacity=".36" strokeWidth="1.3" /><path d="M0 13L112 81M10 96L70 0M0 77L112 33" stroke="#EFF8FF" strokeOpacity=".26" strokeWidth=".6" /></pattern>
       <pattern id={id("leather-grain")} width="26" height="22" patternUnits="userSpaceOnUse"><path d="M0 0H25V20H0M0 9H25M12 0V9M7 9V20" fill="none" stroke="#060709" strokeOpacity=".65" strokeWidth="1" /><path d="M1 1H24M1 10H24" stroke="white" strokeOpacity=".035" /></pattern>
       <clipPath id={id("dial-clip")}><circle cx="320" cy="350" r="178" /></clipPath>
+      <clipPath id={id("daynight-aperture")}><path d="M266 439Q269 406 320 405Q371 406 374 439Q320 454 266 439Z" /></clipPath>
+      <clipPath id={id("daynight-disc-clip")}><circle cx="320" cy="435" r="51" /></clipPath>
       <clipPath id={id("case-clip")}><path d={outline} /></clipPath>
       <filter id={id("shadow")} x="-30%" y="-20%" width="160%" height="160%"><feDropShadow dx="0" dy="18" stdDeviation="15" floodColor="#000" floodOpacity=".65" /></filter>
       <filter id={id("hand-shadow")} x="-70%" y="-30%" width="240%" height="180%"><feDropShadow dx="2" dy="4" stdDeviation="2" floodColor="#000" floodOpacity=".8" /></filter>
@@ -261,6 +278,10 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       {lightPosition && <path d={outline} fill={fill("directional-light")} pointerEvents="none" transform="translate(320 350) scale(.95) translate(-320 -350)" />}
       {design.caseShape === "cushion" && <><path d="M102 284H129V416H102M538 284H511V416H538" fill={fill("metal")} stroke={metal.dark} strokeWidth="2" /><path d="M104 290V410M536 290V410" stroke={metal.light} strokeOpacity=".65" /></>}
       {design.caseShape === "tonneau" && <><path d="M165 190Q128 350 165 510M475 190Q512 350 475 510" fill="none" stroke="#080C11" strokeWidth="9" /><path d="M164 205Q134 350 164 495M476 205Q506 350 476 495" fill="none" stroke={design.accentColor} strokeOpacity=".4" strokeWidth="2" /></>}
+      {design.family === "phantom" && design.caseShape === "tonneau" && <g clipPath={fill("case-clip")}>{[0, 1, 2, 3, 4].map(index => <g key={index}><path d={`M133 ${273 + index * 31}L151 ${266 + index * 31}v7L133 ${280 + index * 31}ZM507 ${273 + index * 31}L489 ${266 + index * 31}v7L507 ${280 + index * 31}Z`} fill={metal.deep} stroke={metal.mid} strokeWidth=".5" /><path d={`M134 ${274 + index * 31}L149 ${268 + index * 31}M506 ${274 + index * 31}L491 ${268 + index * 31}`} stroke={design.accentColor} strokeOpacity=".5" strokeWidth=".7" /></g>)}</g>}
+      {design.family === "abyss" && design.caseShape === "cushion" && <g>{[0, 1, 2, 3, 4].map(index => <path key={index} d={`M107 ${308 + index * 20}H125M515 ${308 + index * 20}H533`} stroke={index === 2 ? design.accentColor : metal.deep} strokeWidth={index === 2 ? "2" : "2.8"} strokeLinecap="round" />)}</g>}
+      {design.family === "prism" && design.caseShape === "octagonal" && <path d="M221 138H417L531 251V447L418 561H223L109 448V253Z" fill="none" stroke={design.accentColor} strokeOpacity=".4" strokeWidth="1.4" />}
+      {(design.family === "helios" || design.family === "nocturne") && design.caseShape === "round" && <g>{Array.from({ length: 12 }, (_, index) => <path key={index} d={design.family === "helios" ? "M320 133V138" : "M320 133L321 136L324 137L321 138L320 141L319 138L316 137L319 136Z"} fill={metal.face} stroke={metal.light} strokeOpacity=".7" strokeWidth={design.family === "helios" ? "1.2" : ".3"} transform={`rotate(${index * 30 + (design.family === "nocturne" ? 15 : 0)} 320 350)`} />)}</g>}
       <circle cx="320" cy="350" r={design.caseShape === "round" && design.family === "vesper" ? "207" : "201"} fill={fill("bezel")} stroke={metal.deep} strokeWidth="2" />
       {bezel === "fluted" && <g data-bezel="fluted"><circle cx="320" cy="350" r="213" fill={fill("bezel")} stroke={metal.light} strokeWidth=".6" />{[...Array(80)].map((_, index) => <g key={index} transform={`rotate(${index * 4.5} 320 350)`}><path d="M315.8 137L320 138L320 157L316.4 157Z" fill={index % 3 === 0 ? metal.light : metal.mid} /><path d="M320 138L324.2 137L323.6 157H320Z" fill={metal.deep} /><path d="M320 138V157" stroke={metal.light} strokeOpacity=".7" strokeWidth=".65" /></g>)}<circle cx="320" cy="350" r="193" fill="none" stroke={metal.light} strokeWidth="1" /></g>}
       {bezel === "iced" && <g data-bezel="iced"><circle cx="320" cy="350" r="213" fill="#D3E4EF" stroke="#F2FDFF" strokeWidth=".8" /><circle cx="320" cy="350" r="204" fill="none" stroke="#162B43" strokeWidth="18" />{[...Array(60)].map((_, index) => <g key={index} transform={`rotate(${index * 6} 320 350)`}><path d="M310.8 139H329.2L328.3 157H311.7Z" fill="#EBF7FF" stroke="#5B748E" strokeWidth=".55" /><path d="M310.8 139L316 145H324L329.2 139Z" fill="#FFFFFF" /><path d="M310.8 139L316 145V152L311.7 157Z" fill={index % 4 === 0 ? "#F5FFFF" : "#7F9FBE"} /><path d="M329.2 139L324 145V152L328.3 157Z" fill={index % 3 === 0 ? "#527B9E" : "#B6D8EF"} /><path d="M311.7 157L316 152H324L328.3 157Z" fill="#DDEDF9" /><path d="M316 145H324V152H316Z" fill={index % 5 === 0 ? "#D0F0FF" : "#FFFFFF"} stroke="#C1D5E6" strokeWidth=".4" /><path d="M316 145L324 152" stroke="#EBFCFF" strokeWidth=".7" /><circle cx="309.7" cy="148" r="1.05" fill="#F3FCFF" /></g>)}{[18, 138, 264].map((angle) => <path key={angle} d="M320 135L321.5 145L330 147L321.5 149L320 159L318.5 149L310 147L318.5 145Z" transform={`rotate(${angle} 320 350)`} fill="#FFFFFF" opacity=".85" />)}<circle cx="320" cy="350" r="192.5" fill="none" stroke="#EDF8FF" strokeWidth="1.5" /></g>}
@@ -285,13 +306,14 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       {design.texture === "sunburst" && <g>{[...Array(180)].map((_, i) => <path key={i} d="M320 350L317 171H319Z" transform={`rotate(${i * 2} 320 350)`} fill={i % 3 === 0 ? "white" : "black"} opacity={i % 3 === 0 ? ".045" : ".032"} />)}</g>}
       {design.texture === "lacquer" && <><path d="M136 326Q303 190 490 312" fill="none" stroke="white" strokeOpacity=".055" strokeWidth="42" /><circle cx="320" cy="350" r="171" fill="none" stroke={metal.face} strokeOpacity=".12" strokeWidth=".7" /></>}
       {mechanical && <MechanicalMovement fill={fill} accent={design.accentColor} initials={initials} />}
+      {flagshipTexture && <FlagshipDialArtwork design={design} illuminated={illuminated} eclipse={eclipse} id={id} fill={fill} />}
       {design.texture === "skeleton" && <g>
         {[{ x: 260, y: 287, r: 54 }, { x: 380, y: 440, r: 53 }, { x: 405, y: 276, r: 37 }].map(({ x, y, r }, index) => <g key={index}><circle cx={x} cy={y} r={r} fill="#060B10" stroke="#58636A" strokeWidth="3" /><circle cx={x} cy={y} r={r - 10} fill="none" stroke="#687079" strokeOpacity=".5" strokeWidth="3" strokeDasharray="2.5 5" /><circle cx={x} cy={y} r={r - 22} fill="none" stroke={metal.mid} strokeWidth="3" />{[0, 60, 120].map((angle) => <path key={angle} d={`M${x - r + 10} ${y}H${x + r - 10}`} transform={`rotate(${angle} ${x} ${y})`} stroke="#4E5C62" strokeWidth="3" />)}<circle cx={x} cy={y} r="7" fill="#0E1114" stroke="#B37B64" strokeWidth="3" /></g>)}
         <path d="M180 280L252 214L297 276L358 256L446 236L473 282L381 312L420 397L458 461L421 499L339 424L279 461L222 487L181 453L250 371Z" fill="#1B2329" fillOpacity=".78" stroke="#65717B" strokeWidth="3" />
         <path d="M187 281L251 223L293 282L358 264L443 244M452 460L420 489L339 415L275 453" fill="none" stroke={metal.light} strokeOpacity=".25" strokeWidth="1" />
         {[[252, 240], [433, 264], [213, 448], [421, 469]].map(([x, y], index) => <g key={index}><circle cx={x} cy={y} r="5" fill={fill("metal")} /><path d={`M${x - 2.5} ${y}h5`} stroke="#11171C" strokeWidth="1.4" /></g>)}
       </g>}
-      {regulator && <><path d="M177 320Q233 179 363 192Q224 229 249 356Q264 448 405 495Q249 518 191 424Z" fill={fill("metal")} opacity=".24" /><path d="M195 313Q223 242 275 217M262 441Q311 481 375 490" fill="none" stroke={metal.light} strokeOpacity=".5" strokeWidth="1.2" /></>}
+      {regulator && design.texture !== "solar" && <><path d="M177 320Q233 179 363 192Q224 229 249 356Q264 448 405 495Q249 518 191 424Z" fill={fill("metal")} opacity=".24" /><path d="M195 313Q223 242 275 217M262 441Q311 481 375 490" fill="none" stroke={metal.light} strokeOpacity=".5" strokeWidth="1.2" /></>}
     </g>
 
     <circle cx="320" cy="350" r="173" fill="none" stroke={illuminated ? "#122521" : isLight ? "#394853" : "#071316"} strokeWidth="9" />
@@ -310,7 +332,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       {[...Array(12)].map((_, i) => {
         if (design.complication === "date" && i === (design.family === "pelagic" ? 6 : 3)) return null;
         if (chrono && i === 6) return null;
-        if (signature && (regulator || smallSeconds || design.complication === "weather") && i === 6) return null;
+        if (signature && (regulator || smallSeconds || dayNight || design.complication === "weather") && i === 6) return null;
         const angle = i * 30;
         const a = angle * Math.PI / 180;
         if (design.markers === "roman" || design.markers === "arabic") return <text key={i} x={320 + Math.sin(a) * (markerRadius - 1)} y={350 - Math.cos(a) * (markerRadius - 1) + 5} fill={ink} textAnchor="middle" fontFamily={design.markers === "roman" ? "Georgia, serif" : "inherit"} fontSize={design.markers === "roman" ? "16" : "19"} fontWeight={design.markers === "arabic" ? "600" : "400"} letterSpacing={design.markers === "roman" ? "1" : "-1"}>{design.markers === "roman" ? roman[i] : (i || 12)}</text>;
@@ -333,9 +355,14 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       <path d={chrono ? "M307 235L314 244L320 233L326 244L333 235" : "M307 266L314 275L320 264L326 275L333 266"} fill="none" stroke={ink} strokeWidth="1.4" />
       <text x="321" y={chrono ? 263 : 296} fontSize={design.family === "vesper" ? "15" : "14"} fontWeight="500" letterSpacing="4.5">WATCHMÉ</text>
       {!chrono && <text x="320" y="314" fontSize="6.5" letterSpacing="2.5" fill={mutedInk}>PRIVATE ATELIER</text>}
-      {!chrono && !smallSeconds && <text x="320" y="413" fontSize="10" letterSpacing="3" fill={mutedInk}>{design.family.toUpperCase()}</text>}
-      {!chrono && !smallSeconds && design.complication !== "weather" && <text x="320" y="431" fontSize={signature ? "8" : "6"} letterSpacing={signature ? "1.8" : "1.6"} fill={signature ? ink : mutedInk}>{signature || (gmt ? "TWO PLACES. ONE MOMENT." : "YOUR TIME. YOUR RULES.")}</text>}
+      {!chrono && !smallSeconds && <text x="320" y={dayNight ? "394" : "413"} fontSize={dayNight ? "8" : "10"} letterSpacing={dayNight ? "2.5" : "3"} fill={mutedInk}>{design.family.toUpperCase()}</text>}
+      {!chrono && !smallSeconds && !dayNight && design.complication !== "weather" && <text x="320" y="431" fontSize={signature ? "8" : "6"} letterSpacing={signature ? "1.8" : "1.6"} fill={signature ? ink : mutedInk}>{signature || (gmt ? "TWO PLACES. ONE MOMENT." : "YOUR TIME. YOUR RULES.")}</text>}
       {chrono && <text x="320" y="502" fontSize={signature ? "8" : "7"} letterSpacing={signature ? "1.8" : "2.4"} fill={design.accentColor}>{signature || `${design.family.toUpperCase()} · CHRONOGRAPH`}</text>}
+    </g>}
+    {regulator && design.texture === "solar" && <g opacity={illuminated ? ".8" : "1"}>
+      <rect x="190" y="333" width="68" height="37" rx="3" fill="#081013" fillOpacity=".88" stroke={metal.dark} strokeWidth=".65" />
+      <rect x="368" y="324" width="84" height="38" rx="3" fill="#081013" fillOpacity=".88" stroke={metal.dark} strokeWidth=".65" />
+      <path d="M193 334H255M371 325H449" stroke={metal.light} strokeOpacity=".18" strokeWidth=".6" />
     </g>}
     {regulator && <g fill={ink} textAnchor="middle"><text x="411" y="338" fontSize="9" letterSpacing="2">WATCHMÉ</text><text x="411" y="356" fontSize="6" letterSpacing="2" fill={mutedInk}>REGULATOR</text><text x="224" y="347" fontSize="8" letterSpacing="1.5" fill={mutedInk}>{design.family.toUpperCase()}</text><text x="224" y="363" fontSize="6" letterSpacing="1.5" fill={mutedInk}>H / M / S</text></g>}
     {initials && !mechanical && <text x="320" y="383" fill={mutedInk} textAnchor="middle" fontSize="8" letterSpacing="3">{initials}</text>}
@@ -348,7 +375,30 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       {weather && weather.code <= 1 ? <g fill="none" stroke={ink} strokeWidth="1.1"><circle cx="295" cy="444" r="6" />{[0, 45, 90, 135].map((angle) => <path key={angle} d="M295 432v3M295 453v3" transform={`rotate(${angle} 295 444)`} />)}</g> : <path d="M292 451a7 7 0 1 1 7-9a5 5 0 1 1 2 9Z" fill="none" stroke={ink} strokeWidth="1.1" />}
       <text x="330" y="454" fill={ink} fontSize="21" fontWeight="300">{weather ? `${Math.round(weather.temperature)}°` : "—"}</text><text x="320" y="471" fill={mutedInk} fontSize="6.5" letterSpacing="1.5">{weather ? weather.description.toUpperCase().slice(0, 24) : "WEATHER UNAVAILABLE"}</text>
     </g>}
-    <text x="320" y={signature && (regulator || smallSeconds || design.complication === "weather") ? "500" : "511"} fill={signature ? ink : mutedInk} textAnchor="middle" fontSize={signature && (regulator || smallSeconds || design.complication === "weather") ? "8" : "5"} letterSpacing="1.4" opacity={signature ? "1" : ".75"}>{chrono ? "" : signature && (regulator || smallSeconds || design.complication === "weather") ? signature : "WATCHMÉ • DESIGNED FOR YOU"}</text>
+    {dayNight && <g>
+      <title>Local 24-hour day and night</title>
+      <path d="M260 442Q262 399 320 398Q378 399 380 442Q320 462 260 442Z" fill={fill("bezel")} stroke={metal.deep} strokeWidth="1.2" />
+      <path d="M264 440Q267 403 320 402Q373 403 376 440Q320 457 264 440Z" fill="#030811" stroke={metal.light} strokeWidth=".55" />
+      <g clipPath={fill("daynight-aperture")}>
+        <g ref={dayNightDiscRef} data-daynight-disc="true" data-daynight-hour="" data-daynight-state="" transform="rotate(0 320 435)">
+          <g clipPath={fill("daynight-disc-clip")}>
+            <circle cx="320" cy="435" r="51" fill={fill("daynight-night")} />
+            <rect x="269" y="435" width="102" height="51" fill={fill("daynight-day")} />
+            <path d="M276 435H364" stroke="#DABF8F" strokeOpacity=".35" strokeWidth=".8" />
+            {[[290, 421], [303, 404], [337, 419], [350, 426], [333, 399]].map(([x, y], index) => <path key={index} d={`M${x} ${y - 2}v4M${x - 2} ${y}h4`} stroke={illuminated ? lumeColor : "#DEDFF5"} strokeOpacity={index % 2 ? ".6" : ".85"} strokeWidth=".65" />)}
+            <path data-daynight-moon="true" d="M323 406A8 8 0 1 0 325 420A9 9 0 0 1 323 406Z" fill={illuminated ? lumeColor : "#E9E4F5"} stroke="#AEB7D2" strokeWidth=".35" />
+            <g data-daynight-sun="true" fill={illuminated ? lumeColor : "#FFE0A3"} stroke={illuminated ? lumeColor : "#FFE0A3"}>
+              <circle cx="320" cy="456" r="7" strokeWidth=".4" />
+              {Array.from({ length: 8 }, (_, index) => <path key={index} d="M320 445V443" strokeWidth="1" strokeLinecap="round" transform={`rotate(${index * 45} 320 456)`} />)}
+            </g>
+          </g>
+        </g>
+      </g>
+      <path d="M316 401H324L320 407Z" fill={metal.light} />
+      <path d="M270 440Q320 454 370 440" fill="none" stroke={metal.light} strokeOpacity=".55" strokeWidth=".6" />
+      <text ref={dayNightLabelRef} data-daynight-label="true" x="320" y="471" textAnchor="middle" fill={ink} fontSize="8" letterSpacing="2">24H</text>
+    </g>}
+    <text x="320" y={signature && (regulator || smallSeconds || dayNight || design.complication === "weather") ? "500" : "511"} fill={signature ? ink : mutedInk} textAnchor="middle" fontSize={signature && (regulator || smallSeconds || dayNight || design.complication === "weather") ? "8" : "5"} letterSpacing="1.4" opacity={signature ? "1" : ".75"}>{chrono ? "" : signature && (regulator || smallSeconds || dayNight || design.complication === "weather") ? signature : "WATCHMÉ • DESIGNED FOR YOU"}</text>
 
     {(chrono || regulator || smallSeconds) && <g fill={design.accentColor}>
       <g ref={subSecondRef}><path d={chrono ? "M239 319V359" : regulator ? "M320 415V452" : "M320 417V452"} stroke={illuminated ? lumeColor : design.accentColor} strokeWidth="1.6" /><circle cx={chrono ? "239" : "320"} cy={chrono ? "350" : "443"} r="3" /></g>

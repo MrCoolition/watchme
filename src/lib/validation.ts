@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { isCompatibleDesign, isValidInitials, isValidSignature, PARTS, PRESETS } from "./presets";
+import { isCompatibleDesign, isValidInitials, isValidSignature, PARTS, PRESETS, WATCH_FAMILIES } from "./presets";
 
-export const familySchema = z.enum(["monolith", "pelagic", "apex", "vesper", "meridian", "orbit", "reactor"]);
+export const familySchema = z.enum(WATCH_FAMILIES);
 const colorSchema = z.string().regex(/^#[a-f0-9]{6}$/i);
 export const designSchema = z.object({
   version: z.literal(1), family: familySchema,

@@ -1,4 +1,5 @@
 import type { WatchDesign } from "@/lib/types";
+import { isFlagshipFamily } from "@/lib/presets";
 
 export const EDITION_CARD_SIZE = { width: 1080, height: 1350 } as const;
 
@@ -44,7 +45,7 @@ export function editionFilename(name: string, design: WatchDesign): string {
 }
 
 const METALS: Record<WatchDesign["metal"], string> = { steel: "Stainless steel", titanium: "Titanium", gold: "Gold tone", rose: "Rose gold tone", graphite: "Graphite", ceramic: "Black ceramic" };
-const TEXTURES: Record<WatchDesign["texture"], string> = { grid: "Clous de Paris", horizontal: "Horizontal relief", sunburst: "Sunburst", lacquer: "Lacquer", skeleton: "Open architecture", carbon: "Carbon weave", meteorite: "Meteorite", guilloche: "Guilloché", mechanical: "Mechanical layers" };
+const TEXTURES: Record<WatchDesign["texture"], string> = { grid: "Clous de Paris", horizontal: "Horizontal relief", sunburst: "Sunburst", lacquer: "Lacquer", skeleton: "Open architecture", carbon: "Carbon weave", meteorite: "Meteorite", guilloche: "Guilloché", mechanical: "Mechanical layers", turbine: "Sculpted turbine", solar: "Solar sculpture", abyssal: "Abyssal contours", prismatic: "Iridescent facets", aventurine: "Aventurine sky" };
 const BEZELS = { polished: "Polished", fluted: "Fluted", iced: "Iced", ceramic: "Ceramic" };
 const STRAPS = { bracelet: "Metal bracelet", leather: "Leather strap", rubber: "Rubber strap" };
 
@@ -69,7 +70,7 @@ export interface EditionCardArtwork {
 /** Compose original vector artwork. User-entered text is escaped independently of trusted SVG. */
 export function buildEditionCardSvg({ design, name, watchSvg, lume = false, eclipse = false }: EditionCardArtwork): string {
   const accent = /^#[0-9a-f]{6}$/i.test(design.accentColor) ? design.accentColor : "#79E8C5";
-  const isReactor = design.family === "reactor";
+  const isReactor = isFlagshipFamily(design.family);
   const title = editionTitle(name);
   const initials = editionInitials(design.initials);
   const specs = editionSpecs(design);

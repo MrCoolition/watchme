@@ -5,6 +5,7 @@ import { Download, LoaderCircle } from "lucide-react";
 import { Dialog } from "@/components/dialog";
 import { WatchFace } from "@/components/watch-face";
 import { drawEditionCard, editionFilename, editionPng, serializeWatchSvg } from "@/lib/edition-card";
+import { isFlagshipFamily } from "@/lib/presets";
 import type { WatchDesign } from "@/lib/types";
 
 export interface EditionCardDialogProps {
@@ -69,7 +70,7 @@ export function EditionCardDialog({ design, name, timezone, secondaryTimezone, l
     }
   }
 
-  return <Dialog title="Your edition card" eyebrow={design.family === "reactor" ? "WATCHMÉ BLACK LABEL" : "THE PRIVATE STUDIO"} onClose={onClose} wide notice={error ? { message: error, error: true } : null}>
+  return <Dialog title="Your edition card" eyebrow={isFlagshipFamily(design.family) ? "WATCHMÉ BLACK LABEL" : "THE PRIVATE STUDIO"} onClose={onClose} wide notice={error ? { message: error, error: true } : null}>
     <p className="muted" style={{ fontSize: 12, lineHeight: 1.65, marginBottom: 18 }}>A keepsake of {isDraft ? "your current draft" : "your current design"}, exactly as previewed. Your finish, personal mark and design fingerprint travel with it.</p>
     <div style={{ position: "relative", maxWidth: 380, margin: "0 auto", background: "#080b0d", border: "1px solid #64727755", borderRadius: 3, overflow: "hidden", aspectRatio: "4 / 5" }} aria-busy={status === "rendering"}>
       <canvas ref={canvasRef} width={1080} height={1350} role="img" aria-label={`${name} edition card preview`} style={{ display: "block", width: "100%", height: "auto" }} />

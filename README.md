@@ -1,6 +1,20 @@
 # WATCHMÉ
 
-A private, dial-first watch collection and design studio. Seven original live watches, curated customization, saved collections, chronograph, countdown, dual time, weather, and a distraction-free display.
+A private, dial-first watch collection and design studio. Twelve original live watches, curated customization, saved collections, chronograph, countdown, dual time, weather, and a distraction-free display.
+
+## The Black Label collection
+
+Five flagships join REACTOR, each with its own layered dial artwork and functional complication:
+
+| Watch | Architecture | Function |
+| --- | --- | --- |
+| PHANTOM | Graphite tonneau, violet turbine dial | Chronograph with case pushers and laps |
+| HELIOS | Gold, sculpted solar dial | Separate hour, minute, and seconds displays |
+| ABYSS | Titanium cushion, cyan concentric depth layers | Secondary-zone GMT hand and 24-hour scale |
+| PRISM | Steel octagon, iridescent ice facets | Live date |
+| NOCTURNE | Rose gold, aventurine starfield | Primary-zone 24-hour day/night disc |
+
+Use the Black Label collection filter to find all six flagships. Each supports Eclipse, interactive lighting, engraving, saved personal editions, and PNG edition cards. New textures are also available in the design studio. NOCTURNE's display follows civil time (day from 06:00 to 18:00); it does not estimate sunrise, sunset, or lunar phase.
 
 ## BLACK LABEL / REACTOR
 

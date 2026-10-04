@@ -3,8 +3,8 @@ import { PRESETS, isCompatibleDesign, normalizeDesign, isComplicationCompatible 
 import type { WatchDesign } from "../src/lib/types";
 
 describe("watch design compatibility", () => {
-  it("ships seven unique valid presets without changing their saved representation", () => {
-    expect(new Set(PRESETS.map((preset) => preset.id)).size).toBe(7);
+  it("ships twelve unique valid presets without changing their saved representation", () => {
+    expect(new Set(PRESETS.map((preset) => preset.id)).size).toBe(12);
     for (const preset of PRESETS) {
       expect(isCompatibleDesign(preset.design)).toBe(true);
       expect(normalizeDesign(preset.design)).toEqual(preset.design);

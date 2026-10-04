@@ -1,15 +1,22 @@
-import type { Complication, WatchDesign, WatchPreset } from "./types";
+import type { Complication, WatchDesign, WatchFamily, WatchPreset } from "./types";
+
+export const FLAGSHIP_FAMILIES = ["reactor", "phantom", "helios", "abyss", "prism", "nocturne"] as const;
+export function isFlagshipFamily(family: string): boolean {
+  return (FLAGSHIP_FAMILIES as readonly string[]).includes(family);
+}
+
+export const WATCH_FAMILIES = ["monolith", "pelagic", "apex", "vesper", "meridian", "orbit", ...FLAGSHIP_FAMILIES] as const satisfies readonly WatchFamily[];
 
 export const PARTS = {
   caseShapes: ["octagonal", "cushion", "tonneau", "round"],
   metals: ["steel", "titanium", "gold", "rose", "graphite", "ceramic"],
-  textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche", "mechanical"],
+  textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche", "mechanical", "turbine", "solar", "abyssal", "prismatic", "aventurine"],
   bezels: ["polished", "fluted", "iced", "ceramic"],
   secondsMotions: ["sweep", "tick"],
   hands: ["baton", "sword", "dauphine", "skeleton"],
   markers: ["baton", "roman", "arabic", "minimal"],
   straps: ["bracelet", "leather", "rubber"],
-  complications: ["date", "gmt", "chronograph", "weather", "regulator", "none"],
+  complications: ["date", "gmt", "chronograph", "weather", "regulator", "daynight", "none"],
 } as const;
 
 export const PRESETS: WatchPreset[] = [
@@ -48,7 +55,34 @@ export const PRESETS: WatchPreset[] = [
     description: "A machine in motion. Open mechanics, cut ceramic, and a pulse of electric mint.",
     design: { version: 1, family: "reactor", caseShape: "octagonal", metal: "ceramic", dialColor: "#101D20", texture: "mechanical", hands: "skeleton", markers: "baton", strap: "rubber", accentColor: "#79E8C5", complication: "chronograph", bezel: "ceramic", lumeColor: "#9FFFD0", secondsMotion: "sweep" },
   },
+  {
+    id: "phantom", name: "PHANTOM", edition: "VIOLET VELOCITY / 08", category: "BLACK LABEL · TURBINE CHRONOGRAPH",
+    description: "A violet pulse inside a graphite machine. Cutaway turbines. Every second under control.",
+    design: { version: 1, family: "phantom", caseShape: "tonneau", metal: "graphite", dialColor: "#19112D", texture: "turbine", hands: "skeleton", markers: "baton", strap: "rubber", accentColor: "#BB8CFF", complication: "chronograph", bezel: "ceramic", lumeColor: "#CFABFF", secondsMotion: "sweep" },
+  },
+  {
+    id: "helios", name: "HELIOS", edition: "SOLAR SOVEREIGN / 09", category: "BLACK LABEL · SOLAR REGULATOR",
+    description: "Sculpted gold radiating from the dark. Hours and seconds in their own orbits.",
+    design: { version: 1, family: "helios", caseShape: "round", metal: "gold", dialColor: "#291B0C", texture: "solar", hands: "dauphine", markers: "minimal", strap: "leather", accentColor: "#FFD078", complication: "regulator", bezel: "fluted", lumeColor: "#FFE4A0", secondsMotion: "sweep" },
+  },
+  {
+    id: "abyss", name: "ABYSS", edition: "PRESSURE BLUE / 10", category: "BLACK LABEL · DEEP-SEA GMT",
+    description: "A pool of electric cyan in brushed titanium. Two time zones. Uncharted depths.",
+    design: { version: 1, family: "abyss", caseShape: "cushion", metal: "titanium", dialColor: "#052B3C", texture: "abyssal", hands: "sword", markers: "baton", strap: "rubber", accentColor: "#43DFFA", complication: "gmt", bezel: "ceramic", lumeColor: "#83F2FF", secondsMotion: "sweep" },
+  },
+  {
+    id: "prism", name: "PRISM", edition: "CHROMATIC ICE / 11", category: "BLACK LABEL · FACETED SPORT",
+    description: "Cut light. Glacial facets. A spectrum locked inside polished steel.",
+    design: { version: 1, family: "prism", caseShape: "octagonal", metal: "steel", dialColor: "#B8CEDC", texture: "prismatic", hands: "sword", markers: "baton", strap: "bracelet", accentColor: "#6250D8", complication: "date", bezel: "iced", lumeColor: "#9BDEFF", secondsMotion: "sweep" },
+  },
+  {
+    id: "nocturne", name: "NOCTURNE", edition: "CELESTIAL HOURS / 12", category: "BLACK LABEL · CELESTIAL DAY / NIGHT",
+    description: "Rose gold under a sky of stars. A living 24-hour horizon, wherever you are.",
+    design: { version: 1, family: "nocturne", caseShape: "round", metal: "rose", dialColor: "#111733", texture: "aventurine", hands: "dauphine", markers: "roman", strap: "leather", accentColor: "#C5ADFF", complication: "daynight", bezel: "polished", lumeColor: "#D8C5FF", secondsMotion: "sweep" },
+  },
 ];
+
+export const FLAGSHIP_PRESETS = PRESETS.filter(preset => isFlagshipFamily(preset.id));
 
 export const COMPLICATIONS_BY_FAMILY = PRESETS.reduce((registry, preset) => {
   registry[preset.id] = PARTS.complications.filter((complication) => isComplicationCompatible(preset.design.caseShape, complication));

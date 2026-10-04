@@ -36,3 +36,9 @@ export function getHandAngles(parts: ClockParts) {
   const minutes = parts.minute + seconds / 60;
   return { second: seconds * 6, minute: minutes * 6, hour: (parts.hour % 12 + minutes / 60) * 30, gmt: (parts.hour + minutes / 60) * 15 };
 }
+
+/** A civil-time 24-hour indicator, not an astronomical sunrise or moon-phase calculation. */
+export function getDayNightState(parts: ClockParts) {
+  const hours = parts.hour + parts.minute / 60 + parts.second / 3600;
+  return { angle: hours * 15, isDay: hours >= 6 && hours < 18, hour: parts.hour };
+}

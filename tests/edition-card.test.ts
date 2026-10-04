@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildEditionCardSvg, editionFilename, editionFingerprint, editionInitials, editionSpecs, editionTitle, escapeXml } from "../src/lib/edition-card";
-import { PRESETS } from "../src/lib/presets";
+import { PRESETS, isFlagshipFamily } from "../src/lib/presets";
 import type { WatchDesign } from "../src/lib/types";
 
 const design = PRESETS[0].design;
@@ -49,14 +49,14 @@ describe("edition card artwork", () => {
     expect(editionFilename("x".repeat(1000), design).length).toBeLessThan(100);
   });
 
-  it("describes real finish choices and identifies Reactor without inventing a limited serial", () => {
+  it("describes real finish choices and identifies Black Label editions without inventing a limited serial", () => {
     for (const preset of PRESETS) {
       expect(editionSpecs(preset.design).every(spec => spec.value)).toBe(true);
       const artwork = buildEditionCardSvg({ design: preset.design, name: preset.name, watchSvg: "<svg/>" });
       expect(artwork).toContain('width="1080" height="1350"');
       expect(artwork).toContain("DESIGN FINGERPRINT");
       expect(artwork).not.toContain("LIMITED");
-      expect(artwork.includes("BLACK LABEL")).toBe(preset.id === "reactor");
+      expect(artwork.includes("BLACK LABEL")).toBe(isFlagshipFamily(preset.id));
     }
   });
 });

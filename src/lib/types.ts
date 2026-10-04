@@ -1,13 +1,13 @@
-export type WatchFamily = "monolith" | "pelagic" | "apex" | "vesper" | "meridian" | "orbit" | "reactor";
+export type WatchFamily = "monolith" | "pelagic" | "apex" | "vesper" | "meridian" | "orbit" | "reactor" | "phantom" | "helios" | "abyss" | "prism" | "nocturne";
 export type CaseShape = "octagonal" | "cushion" | "tonneau" | "round";
 export type Metal = "steel" | "titanium" | "gold" | "rose" | "graphite" | "ceramic";
-export type DialTexture = "grid" | "horizontal" | "sunburst" | "lacquer" | "skeleton" | "carbon" | "meteorite" | "guilloche" | "mechanical";
+export type DialTexture = "grid" | "horizontal" | "sunburst" | "lacquer" | "skeleton" | "carbon" | "meteorite" | "guilloche" | "mechanical" | "turbine" | "solar" | "abyssal" | "prismatic" | "aventurine";
 export type Bezel = "polished" | "fluted" | "iced" | "ceramic";
 export type SecondsMotion = "sweep" | "tick";
 export type Hands = "baton" | "sword" | "dauphine" | "skeleton";
 export type Markers = "baton" | "roman" | "arabic" | "minimal";
 export type Strap = "bracelet" | "leather" | "rubber";
-export type Complication = "date" | "gmt" | "chronograph" | "weather" | "regulator" | "none";
+export type Complication = "date" | "gmt" | "chronograph" | "weather" | "regulator" | "daynight" | "none";
 export interface WatchDesign {
   version: 1;
   family: WatchFamily;

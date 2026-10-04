@@ -17,7 +17,7 @@ describe("REACTOR personal editions", () => {
       expect(designSchema.safeParse({ ...reactor.design, initials }).success).toBe(false);
     }
   });
-  it("persists the new preset and allows all seven originals to be favorited", () => {
+  it("persists REACTOR and allows all originals to be favorited", () => {
     expect(preferencesSchema.parse({ ...DEFAULT_PREFERENCES, activeWatchId: "reactor", favoritePresets: PRESETS.map(preset => preset.id) })).toMatchObject({ activeWatchId: "reactor", favoritePresets: expect.arrayContaining(["reactor", "monolith"]) });
   });
 });
