@@ -14,6 +14,8 @@ assert.ok(process.env.SESSION_SECRET && process.env.WATCHME_PASSWORD_HASH);
 const session = await sealData({ authenticated: true, issuedAt: Date.now(), authVersion: createHash('sha256').update(process.env.WATCHME_PASSWORD_HASH).digest('hex') }, { password: process.env.SESSION_SECRET, ttl: 3600 });
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
+// Keep viewport transitions deterministic on Windows; focus must also work without native fullscreen.
+await context.addInitScript(() => { Element.prototype.requestFullscreen = async () => { throw new Error('Verify in-page focus'); }; });
 const page = await context.newPage();
 const runtimeErrors = [];
 let loginPassphrase;
