@@ -48,8 +48,8 @@ export const UnrealDial = memo(function UnrealDial({ design, live, illuminated, 
     let visible = true;
     let frame = 0;
     let lastPaint = -Infinity;
-    let interactionCount = Number(layer.dataset.unrealInteractions || 0);
-    let frozenTimestamp = 0;
+    let interactionCount = 0;
+    let frozenTimestamp = Number(layer.dataset.unrealFrame || 0);
     let drag: { id: number; startX: number; startY: number; lastX: number; lastY: number; active: boolean } | null = null;
     const canAnimate = () => !calm && !reduced.matches && intensity > 0;
     function paint(timestamp: number) {
@@ -70,6 +70,7 @@ export const UnrealDial = memo(function UnrealDial({ design, live, illuminated, 
           particle.setAttribute("transform", `translate(${point.x.toFixed(2)} ${point.y.toFixed(2)}) rotate(${point.angle.toFixed(2)})`);
         });
       }
+      if (wake && !impulse) wake.setAttribute("opacity", "0");
       if (wake && impulse) {
         const decay = Math.exp(-Math.max(0, timestamp - impulse.at) / 1400);
         const { x, y, dx, dy } = impulse;
@@ -154,6 +155,9 @@ export const UnrealDial = memo(function UnrealDial({ design, live, illuminated, 
     svg.addEventListener("pointerup", up);
     svg.addEventListener("pointercancel", up);
     svg.addEventListener("keydown", key);
+    // A settings change starts a new interaction state at the same captured instant.
+    layer.setAttribute("data-unreal-interactions", "0");
+    paint(frozenTimestamp);
     start();
     return () => {
       stop(); observer?.disconnect();
