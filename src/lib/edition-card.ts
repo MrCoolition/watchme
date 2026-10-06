@@ -1,6 +1,7 @@
 import type { ActiveComplication, WatchDesign } from "@/lib/types";
 import { getComplications, hasComplication, isFlagshipFamily } from "@/lib/presets";
-import { getEditionDetails, getEditionPages, resolveEditionReferences, type EditionDetailSection, type EditionPage, type EditionReference } from "@/lib/edition-details";
+import { getEditionAtmosphereDetails, getEditionDetails, getEditionPages, resolveEditionReferences, type EditionDetailSection, type EditionPage, type EditionReference } from "@/lib/edition-details";
+import { isUnrealFamily } from "@/lib/unreal";
 
 export const EDITION_CARD_SIZE = { width: 1080, height: 1350 } as const;
 
@@ -30,7 +31,12 @@ export function editionTitle(name: string): string[] {
 
 /** A content fingerprint, not a serial number, ownership claim, or security hash. */
 export function editionFingerprint(design: WatchDesign): string {
-  const canonical = JSON.stringify(Object.fromEntries(Object.entries(design).filter(([, value]) => value !== undefined).sort(([a], [b]) => a.localeCompare(b, "en"))));
+  const stableValue = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(stableValue);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined).sort(([a], [b]) => a.localeCompare(b, "en")).map(([key, item]) => [key, stableValue(item)]));
+    return value;
+  };
+  const canonical = JSON.stringify(stableValue(design));
   let first = 0x811c9dc5;
   let second = 0x9e3779b9;
   for (const byte of new TextEncoder().encode(canonical)) {
@@ -47,7 +53,7 @@ export function editionFilename(name: string, design: WatchDesign, page?: Editio
 }
 
 const METALS: Record<WatchDesign["metal"], string> = { steel: "Stainless steel", titanium: "Titanium", gold: "Gold tone", rose: "Rose gold tone", graphite: "Graphite", ceramic: "Black ceramic", bronze: "Bronze tone", platinum: "Platinum tone", silver: "Silver tone", whitegold: "White gold tone", carbon: "Carbon composite", sapphire: "Sapphire crystal" };
-const TEXTURES: Record<WatchDesign["texture"], string> = { grid: "Clous de Paris", horizontal: "Horizontal relief", sunburst: "Sunburst", lacquer: "Lacquer", skeleton: "Open architecture", carbon: "Carbon weave", meteorite: "Meteorite", guilloche: "Guilloché", mechanical: "Mechanical layers", turbine: "Sculpted turbine", solar: "Solar sculpture", abyssal: "Abyssal contours", prismatic: "Iridescent facets", aventurine: "Aventurine sky", motherofpearl: "Mother-of-pearl", malachite: "Malachite", lapis: "Lapis lazuli", marble: "Marble", linen: "Linen weave", honeycomb: "Honeycomb", wave: "Wave relief", fume: "Fumé gradient", enamel: "Enamel", sand: "Sand grain" };
+const TEXTURES: Record<WatchDesign["texture"], string> = { grid: "Clous de Paris", horizontal: "Horizontal relief", sunburst: "Sunburst", lacquer: "Lacquer", skeleton: "Open architecture", carbon: "Carbon weave", meteorite: "Meteorite", guilloche: "Guilloché", mechanical: "Mechanical layers", turbine: "Sculpted turbine", solar: "Solar sculpture", abyssal: "Abyssal contours", prismatic: "Iridescent facets", aventurine: "Aventurine sky", motherofpearl: "Mother-of-pearl", malachite: "Malachite", lapis: "Lapis lazuli", marble: "Marble", linen: "Linen weave", honeycomb: "Honeycomb", wave: "Wave relief", fume: "Fumé gradient", enamel: "Enamel", sand: "Sand grain", liquid: "Liquid atmosphere", snow: "Snow atmosphere" };
 const CASES: Record<WatchDesign["caseShape"], string> = { octagonal: "Octagonal", cushion: "Cushion", tonneau: "Tonneau", round: "Round", square: "Square", rectangle: "Rectangular", hexagonal: "Hexagonal", oval: "Oval", shield: "Shield" };
 const FINISHES: Record<NonNullable<WatchDesign["caseFinish"]>, string> = { polished: "Polished", brushed: "Brushed", blasted: "Blasted", hammered: "Hammered", damascus: "Damascus pattern" };
 const BEZELS: Record<NonNullable<WatchDesign["bezel"]>, string> = { polished: "Polished", fluted: "Fluted", iced: "Iced", ceramic: "Ceramic", coined: "Coin-edge", scalloped: "Scalloped", screws: "Exposed screws" };
@@ -259,6 +265,32 @@ function buildSheet(artwork: EditionCardArtwork, accent: string): string {
     <text x="1016" y="1243" fill="${accent}" font-size="9" text-anchor="end" letter-spacing="1.4">${artwork.eclipse ? "ECLIPSE" : artwork.lume ? "LUME" : "DAYLIGHT"}</text>
   `;
 }
+function atmospherePage(artwork: EditionCardArtwork, accent: string): string {
+  const section = getEditionAtmosphereDetails(artwork.design);
+  return `
+    ${label("THE ATMOSPHERE STUDY", 65, 158, accent, 9.5)}
+    <text x="61" y="212" font-family="Georgia, 'Times New Roman', serif" font-size="47" fill="${CARD.paper}" letter-spacing="-1">An atmosphere of your own.</text>
+    ${linesSvg(wrap(visibleText(artwork.name) || "Untitled", 950, 20), 65, 251, 20, 24, CARD.text)}
+    <path d="M64 302H1016" stroke="url(#edition-rule)"/>
+    <g data-edition-section="atmosphere">${section.rows.map((row, index) => {
+      const y = 342 + index * 132;
+      return `<g data-edition-field="${escapeXml(row.label)}">
+        ${label(`${String(index + 1).padStart(2, "0")} / ${row.label}`, 65, y, accent, 9)}
+        ${row.color ? `<circle cx="77" cy="${y + 28}" r="11" fill="${color(row.color, "#9BE7FF")}" stroke="${CARD.text}" stroke-opacity=".6"/>` : ""}
+        ${linesSvg(wrap(row.value, row.color ? 358 : 393, 25), row.color ? 104 : 65, y + 36, 25, 29, CARD.paper)}
+        ${linesSvg(wrap(row.note || "", 400, 12), 65, y + 65, 12, 17, CARD.muted)}
+        <path d="M65 ${y + 108}H469" stroke="#A9BDB3" stroke-opacity=".12"/>
+      </g>`;
+    }).join("")}</g>
+    ${nestedSvg(artwork.watchSvg, 511, 332, 505, 665)}
+    ${label("ONE CAPTURED MOMENT", 542, 1040, accent, 9)}
+    ${linesSvg(wrap("The same dial artwork as your portrait. Your atmosphere settings remain in the complete design file.", 438, 13), 542, 1070, 13, 19, CARD.muted)}
+    <path d="M64 1178H1016" stroke="url(#edition-rule)"/>
+    ${label("DIGITAL MATERIAL / PERSONAL EXPRESSION", 65, 1209, CARD.muted, 9)}
+    ${linesSvg(wrap("Atmosphere motion is independent of the clock. Your timekeeping and complications keep their selected behavior.", 930, 12), 65, 1234, 12, 17, CARD.text)}
+  `;
+}
+
 function referenceEntry(reference: EditionReference, index: number, number: number, accent: string): string {
   const x = 64 + index % 2 * 492;
   const y = 307 + Math.floor(index / 2) * 150;
@@ -315,7 +347,7 @@ export function buildEditionCardSvg(artwork: EditionCardArtwork): string {
   const page = artwork.page || { id: "portrait", label: "Portrait", kind: "portrait" } as const;
   const pages = getEditionPages(design);
   const pageNumber = Math.max(0, pages.findIndex(item => item.id === page.id)) + 1;
-  const content = page.kind === "build" ? buildSheet(artwork, accent) : page.kind === "references" ? referencePage(artwork, page, accent) : portrait(artwork, accent);
+  const content = page.kind === "build" ? buildSheet(artwork, accent) : page.kind === "atmosphere" ? atmospherePage(artwork, accent) : page.kind === "references" ? referencePage(artwork, page, accent) : portrait(artwork, accent);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350" data-edition-page="${escapeXml(page.id)}">
   <title>${escapeXml(visibleText(artwork.name) || "Untitled")} — ${escapeXml(page.label)}</title>
   <defs>
@@ -331,7 +363,7 @@ export function buildEditionCardSvg(artwork: EditionCardArtwork): string {
   <g font-family="Arial, Helvetica, sans-serif">
     <path d="M64 66L72 78L79 63L86 78L94 66" fill="none" stroke="${accent}" stroke-width="1.5"/>
     <text x="109" y="85" fill="${CARD.paper}" font-size="27" font-weight="500" letter-spacing="5">WATCHMÉ</text>
-    ${label(isFlagshipFamily(design.family) ? "BLACK LABEL" : "PRIVATE STUDIO", 783, 67, accent, 9)}
+    ${label(isUnrealFamily(design.family) ? "UNREAL" : isFlagshipFamily(design.family) ? "BLACK LABEL" : "PRIVATE STUDIO", 783, 67, accent, 9)}
     <text x="1016" y="88" text-anchor="end" fill="${CARD.muted}" font-size="8" letter-spacing="1.8">${isDraft ? "DRAFT SNAPSHOT" : "COLLECTOR EDITION"} / ${String(pageNumber).padStart(2, "0")}</text>
     <path d="M64 114H1016" stroke="url(#edition-rule)" stroke-width=".7"/>
     ${content}

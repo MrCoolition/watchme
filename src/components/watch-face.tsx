@@ -11,6 +11,8 @@ import { getMoonPhase } from "@/lib/moon";
 import { getMoonTerminatorPath, MoonPhaseDial } from "@/components/moon-phase-dial";
 import { getCalendarState } from "@/lib/calendar";
 import { getSecondsAngle } from "@/lib/seconds";
+import { isUnrealFamily, isUnrealTexture } from "@/lib/unreal";
+import { UnrealDial } from "@/components/unreal-dial";
 import { CATALOG_HANDS, CATALOG_MARKERS, CATALOG_TEXTURES, CatalogDefs, CatalogDialTexture, CatalogHand, CatalogMarker, CatalogStrap, CaseFinishLayer, CatalogBezel, ChapterRing, CrystalTreatment } from "@/components/catalog-watch-parts";
 
 export interface WatchFaceProps {
@@ -250,11 +252,13 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
   const fullDial = illuminated && design.lumeStyle === "full-dial";
   const dialGlowColor = fullDial ? "#153C33" : lumeColor;
   const mechanical = design.texture === "mechanical";
+  const unreal = isUnrealTexture(design.texture);
+  const interactiveUnreal = unreal && live;
   const flagship = ["reactor", "phantom", "helios", "abyss", "prism", "nocturne"].includes(design.family);
   const flagshipTexture = ["turbine", "solar", "abyssal", "prismatic", "aventurine"].includes(design.texture);
   const lightX = Math.max(-1, Math.min(1, lightPosition?.x || 0));
   const lightY = Math.max(-1, Math.min(1, lightPosition?.y || 0));
-  const isLight = ["prismatic", "motherofpearl", "marble"].includes(design.texture) || (!flagshipTexture && !["malachite", "lapis", "fume"].includes(design.texture) && parseInt(design.dialColor.slice(1, 3), 16) > 145 && parseInt(design.dialColor.slice(3, 5), 16) > 145);
+  const isLight = ["prismatic", "motherofpearl", "marble"].includes(design.texture) || (!unreal && !flagshipTexture && !["malachite", "lapis", "fume"].includes(design.texture) && parseInt(design.dialColor.slice(1, 3), 16) > 145 && parseInt(design.dialColor.slice(3, 5), 16) > 145);
   const ink = illuminated ? dialGlowColor : isLight ? "#26353E" : "#DCE4E3";
   const mutedInk = fullDial ? "#315147" : illuminated ? shade(lumeColor, 0.45) : isLight ? "#4D5D67" : "#A3B6B5";
   const counterInk = fullDial ? lumeColor : ink;
@@ -275,9 +279,10 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
     <circle cx={x} cy={y} r="3.5" fill={metal.face} />
   </g>;
 
-  return <svg ref={rootRef} viewBox={framing === "dial" ? "128 158 384 384" : framing === "face" ? "82 96 508 508" : "0 0 640 720"} data-framing={framing} data-case-shape={design.caseShape} data-metal={design.metal} data-lume-style={design.lumeStyle || "standard"} data-flagship-family={flagship ? design.family : undefined} data-eclipse={eclipse} data-chronograph-running={chronographRunning} className={className} role={chrono && live && framing !== "dial" && (onChronographToggle || onChronographReset) ? "group" : "img"} aria-labelledby={`${id("title")} ${id("time")}`} style={{ overflow: "visible", width: "100%", height: "100%", maxHeight: "100%", display: "block", "--watch-accent": design.accentColor } as CSSProperties}>
+  return <svg ref={rootRef} viewBox={framing === "dial" ? "128 158 384 384" : framing === "face" ? "82 96 508 508" : "0 0 640 720"} data-framing={framing} data-case-shape={design.caseShape} data-metal={design.metal} data-lume-style={design.lumeStyle || "standard"} data-flagship-family={flagship ? design.family : undefined} data-eclipse={eclipse} data-chronograph-running={chronographRunning} className={className} role={interactiveUnreal || chrono && live && framing !== "dial" && (onChronographToggle || onChronographReset) ? "group" : "img"} tabIndex={interactiveUnreal ? 0 : undefined} aria-label={interactiveUnreal ? `Interactive ${design.texture} dial` : undefined} aria-labelledby={interactiveUnreal ? undefined : `${id("title")} ${id("time")}`} aria-describedby={interactiveUnreal ? `${id("title")} ${id("time")} ${id("interaction")}` : undefined} style={{ overflow: "visible", width: "100%", height: "100%", maxHeight: "100%", display: "block", touchAction: interactiveUnreal ? "pan-y" : undefined, "--watch-accent": design.accentColor } as CSSProperties}>
     <title id={id("title")}>{`WATCHMÉ ${design.family} — ${design.metal} ${design.caseShape} watch`}</title>
     <desc id={id("time")} ref={accessibleTimeRef}>Live watch showing your selected time zone.</desc>
+    {interactiveUnreal && <desc id={id("interaction")}>{`Drag horizontally across the dial, use arrow keys, or press Space to ${design.texture === "liquid" ? "stir the liquid" : "create a gust of snow"}. Vertical swipes scroll the page. Calm and reduced motion pause automatic movement; direct interaction remains available.`}</desc>}
     <defs>
       <CatalogDefs id={id} design={design} />
       <linearGradient id={id("metal")} x1="0" y1="0" x2=".9" y2="1" gradientUnits="objectBoundingBox"><stop stopColor={metal.light} /><stop offset=".12" stopColor={metal.mid} /><stop offset=".30" stopColor={metal.dark} /><stop offset=".45" stopColor={metal.light} /><stop offset=".51" stopColor={metal.mid} /><stop offset=".68" stopColor={metal.deep} /><stop offset=".86" stopColor={metal.mid} /><stop offset="1" stopColor={metal.light} /></linearGradient>
@@ -410,6 +415,7 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
       </g>}
       {regulator && design.texture !== "solar" && <><path d="M177 320Q233 179 363 192Q224 229 249 356Q264 448 405 495Q249 518 191 424Z" fill={fill("metal")} opacity=".24" /><path d="M195 313Q223 242 275 217M262 441Q311 481 375 490" fill="none" stroke={metal.light} strokeOpacity=".5" strokeWidth="1.2" /></>}
     </g>
+    {unreal && <UnrealDial design={design} live={live} illuminated={illuminated} eclipse={eclipse} fullDial={fullDial} markerRadius={markerRadius} rootRef={rootRef} />}
 
     <circle cx="320" cy="350" r="173" fill="none" stroke={fullDial ? shade(lumeColor, .78) : illuminated ? "#122521" : isLight ? "#394853" : "#071316"} strokeWidth="9" />
     <circle cx="320" cy="350" r="177" fill="none" stroke={illuminated ? "#143128" : metal.face} strokeOpacity=".5" strokeWidth=".65" />
@@ -457,9 +463,9 @@ export function WatchFace({ design, timezone, secondaryTimezone = "Europe/London
     {!regulator && <g textAnchor="middle" fill={ink}>
       <path d={chrono ? "M307 235L314 244L320 233L326 244L333 235" : "M307 266L314 275L320 264L326 275L333 266"} fill="none" stroke={ink} strokeWidth="1.4" />
       <text x="321" y={chrono ? 263 : 296} fontSize={design.family === "vesper" ? "15" : "14"} fontWeight="500" letterSpacing="4.5">WATCHMÉ</text>
-      {!chrono && <text x="320" y="314" fontSize="6.5" letterSpacing="2.5" fill={mutedInk}>PRIVATE ATELIER</text>}
+      {!chrono && <text x="320" y="314" fontSize="6.5" letterSpacing="2.5" fill={mutedInk}>{isUnrealFamily(design.family) ? "UNREAL" : "PRIVATE ATELIER"}</text>}
       {!chrono && !smallSeconds && <text x="320" y={lowerFeature ? "394" : "413"} fontSize={lowerFeature ? "8" : "10"} letterSpacing={lowerFeature ? "2.5" : "3"} fill={mutedInk}>{design.family.toUpperCase()}</text>}
-      {!chrono && !smallSeconds && !lowerFeature && <text x="320" y="431" fontSize="6" letterSpacing="1.6" fill={mutedInk}>{gmt ? "TWO PLACES. ONE MOMENT." : "YOUR TIME. YOUR RULES."}</text>}
+      {!chrono && !smallSeconds && !lowerFeature && <text x="320" y="431" fontSize="6" letterSpacing="1.6" fill={mutedInk}>{isUnrealFamily(design.family) ? design.texture === "snow" ? "STILLNESS IN MOTION" : "TIME IN ANOTHER STATE" : gmt ? "TWO PLACES. ONE MOMENT." : "YOUR TIME. YOUR RULES."}</text>}
       {chrono && !lowerFeature && <text x="320" y="495" fontSize="7" letterSpacing="2.4" fill={design.accentColor}>{`${design.family.toUpperCase()} · CHRONOGRAPH`}</text>}
     </g>}
     {regulator && design.texture === "solar" && <g opacity={illuminated ? ".8" : "1"}>

@@ -18,7 +18,7 @@ describe("five new Black Label flagships", () => {
       const record = watchInputSchema.parse(JSON.parse(JSON.stringify({ name: `${preset.name} private edition`, design })));
       expect(record.design).toEqual(design);
       expect(normalizeDesign(record.design)).toEqual(design);
-      expect(preferencesSchema.parse({ ...DEFAULT_PREFERENCES, activeWatchId: preset.id, favoritePresets: PRESETS.map(item => item.id) }).favoritePresets).toHaveLength(12);
+      expect(preferencesSchema.parse({ ...DEFAULT_PREFERENCES, activeWatchId: preset.id, favoritePresets: PRESETS.map(item => item.id) }).favoritePresets).toEqual(PRESETS.map(item => item.id));
     }
   });
   it("accepts the day/night aperture as a mutually exclusive complication", () => {

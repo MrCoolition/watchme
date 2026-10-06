@@ -1,7 +1,7 @@
-export type WatchFamily = "monolith" | "pelagic" | "apex" | "vesper" | "meridian" | "orbit" | "reactor" | "phantom" | "helios" | "abyss" | "prism" | "nocturne";
+export type WatchFamily = "monolith" | "pelagic" | "apex" | "vesper" | "meridian" | "orbit" | "reactor" | "phantom" | "helios" | "abyss" | "prism" | "nocturne" | "flux" | "whiteout";
 export type CaseShape = "octagonal" | "cushion" | "tonneau" | "round" | "square" | "rectangle" | "hexagonal" | "oval" | "shield";
 export type Metal = "steel" | "titanium" | "gold" | "rose" | "graphite" | "ceramic" | "bronze" | "platinum" | "silver" | "whitegold" | "carbon" | "sapphire";
-export type DialTexture = "grid" | "horizontal" | "sunburst" | "lacquer" | "skeleton" | "carbon" | "meteorite" | "guilloche" | "mechanical" | "turbine" | "solar" | "abyssal" | "prismatic" | "aventurine" | "motherofpearl" | "malachite" | "lapis" | "marble" | "linen" | "honeycomb" | "wave" | "fume" | "enamel" | "sand";
+export type DialTexture = "grid" | "horizontal" | "sunburst" | "lacquer" | "skeleton" | "carbon" | "meteorite" | "guilloche" | "mechanical" | "turbine" | "solar" | "abyssal" | "prismatic" | "aventurine" | "motherofpearl" | "malachite" | "lapis" | "marble" | "linen" | "honeycomb" | "wave" | "fume" | "enamel" | "sand" | "liquid" | "snow";
 export type Bezel = "polished" | "fluted" | "iced" | "ceramic" | "coined" | "scalloped" | "screws";
 export type SecondsMotion = "sweep" | "tick" | "stepped";
 export type SecondsIndication = "running" | "chronograph" | "none";
@@ -19,6 +19,13 @@ export type CrystalStyle = "clear" | "domed" | "smoked" | "faceted";
 export type LumeStyle = "standard" | "full-dial" | "hands-only" | "none";
 export type Complication = "date" | "gmt" | "chronograph" | "weather" | "regulator" | "daynight" | "moonphase" | "daydate" | "calendar" | "none";
 export type ActiveComplication = Exclude<Complication, "none">;
+export interface Atmosphere {
+  intensity: number;
+  density: number;
+  gravity: "down" | "float" | "up";
+  color: string;
+  calm: boolean;
+}
 export interface WatchDesign {
   version: 1;
   family: WatchFamily;
@@ -52,6 +59,8 @@ export interface WatchDesign {
   lumeStyle?: LumeStyle;
   /** Source catalog references, not claims of physical hardware or certification. */
   catalogReferences?: string[];
+  /** Digital dial atmosphere; remains saved when another texture is selected. */
+  atmosphere?: Atmosphere;
 }
 export interface WatchPreset { id: WatchFamily; name: string; edition: string; description: string; category: string; design: WatchDesign; }
 export interface SavedWatch { id: string; name: string; design: WatchDesign; favorite: boolean; createdAt: string; updatedAt: string; }

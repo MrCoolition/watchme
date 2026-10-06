@@ -1,11 +1,13 @@
 import type { ActiveComplication, Complication, WatchDesign, WatchFamily, WatchPreset } from "./types";
+import { ATMOSPHERE_GRAVITIES, getAtmosphere, isUnrealFamily, isValidAtmosphere, UNREAL_FAMILIES, UNREAL_TEXTURES } from "./unreal";
+export { isUnrealFamily, isUnrealTexture, UNREAL_FAMILIES } from "./unreal";
 
 export const FLAGSHIP_FAMILIES = ["reactor", "phantom", "helios", "abyss", "prism", "nocturne"] as const;
 export function isFlagshipFamily(family: string): boolean {
   return (FLAGSHIP_FAMILIES as readonly string[]).includes(family);
 }
 
-export const WATCH_FAMILIES = ["monolith", "pelagic", "apex", "vesper", "meridian", "orbit", ...FLAGSHIP_FAMILIES] as const satisfies readonly WatchFamily[];
+export const WATCH_FAMILIES = ["monolith", "pelagic", "apex", "vesper", "meridian", "orbit", ...FLAGSHIP_FAMILIES, ...UNREAL_FAMILIES] as const satisfies readonly WatchFamily[];
 
 export const ACTIVE_COMPLICATIONS = ["date", "gmt", "chronograph", "weather", "regulator", "daynight", "moonphase", "daydate", "calendar"] as const satisfies readonly ActiveComplication[];
 export const MAX_ACTIVE_COMPLICATIONS = 4;
@@ -13,7 +15,8 @@ export const MAX_ACTIVE_COMPLICATIONS = 4;
 export const PARTS = {
   caseShapes: ["octagonal", "cushion", "tonneau", "round", "square", "rectangle", "hexagonal", "oval", "shield"],
   metals: ["steel", "titanium", "gold", "rose", "graphite", "ceramic", "bronze", "platinum", "silver", "whitegold", "carbon", "sapphire"],
-  textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche", "mechanical", "turbine", "solar", "abyssal", "prismatic", "aventurine", "motherofpearl", "malachite", "lapis", "marble", "linen", "honeycomb", "wave", "fume", "enamel", "sand"],
+  textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche", "mechanical", "turbine", "solar", "abyssal", "prismatic", "aventurine", "motherofpearl", "malachite", "lapis", "marble", "linen", "honeycomb", "wave", "fume", "enamel", "sand", ...UNREAL_TEXTURES],
+  atmosphereGravities: ATMOSPHERE_GRAVITIES,
   bezels: ["polished", "fluted", "iced", "ceramic", "coined", "scalloped", "screws"],
   secondsMotions: ["sweep", "tick", "stepped"],
   secondsIndications: ["running", "chronograph", "none"],
@@ -93,9 +96,20 @@ export const PRESETS: WatchPreset[] = [
     description: "Rose gold under a sky of stars. A living 24-hour horizon, wherever you are.",
     design: { version: 1, family: "nocturne", caseShape: "round", metal: "rose", dialColor: "#111733", texture: "aventurine", hands: "dauphine", markers: "roman", strap: "leather", accentColor: "#C5ADFF", complication: "daynight", bezel: "polished", lumeColor: "#D8C5FF", secondsMotion: "sweep" },
   },
+  {
+    id: "flux", name: "FLUX", edition: "UNREAL / 01", category: "UNREAL · LIQUID TIME",
+    description: "Liquid light suspended in sapphire. A mirrored mesh bracelet. Time without a fixed state.",
+    design: { version: 1, family: "flux", caseShape: "round", metal: "sapphire", dialColor: "#091722", texture: "liquid", hands: "sword", markers: "minimal", strap: "mesh", accentColor: "#C1F1FF", complication: "none", bezel: "polished", caseFinish: "polished", crystalStyle: "domed", lumeColor: "#C1F1FF", secondsMotion: "sweep", atmosphere: { intensity: 65, density: 60, gravity: "float", color: "#9BE7FF", calm: false } },
+  },
+  {
+    id: "whiteout", name: "WHITEOUT", edition: "UNREAL / 02", category: "UNREAL · SNOW FIELD",
+    description: "A private snowstorm beneath domed crystal. Brushed titanium, glacial light, and an ice-white strap.",
+    design: { version: 1, family: "whiteout", caseShape: "cushion", metal: "titanium", dialColor: "#152531", texture: "snow", hands: "sword", markers: "baton", strap: "rubber", strapColor: "#DCECF1", accentColor: "#BCEAFF", complication: "date", bezel: "polished", caseFinish: "brushed", crystalStyle: "domed", lumeColor: "#D9F6FF", secondsMotion: "sweep", atmosphere: { intensity: 65, density: 60, gravity: "down", color: "#9BE7FF", calm: false } },
+  },
 ];
 
 export const FLAGSHIP_PRESETS = PRESETS.filter(preset => isFlagshipFamily(preset.id));
+export const UNREAL_PRESETS = PRESETS.filter(preset => isUnrealFamily(preset.id));
 
 export const COMPLICATIONS_BY_FAMILY = PRESETS.reduce((registry, preset) => {
   registry[preset.id] = PARTS.complications.filter((complication) => isComplicationCompatible(preset.design.caseShape, complication));
@@ -239,6 +253,7 @@ export function isCompatibleDesign(design: WatchDesign): boolean {
     && (design.secondsAdvances === undefined || (PARTS.secondsAdvances as readonly number[]).includes(design.secondsAdvances))
     && (design.secondsSetting === undefined || (PARTS.secondsSettings as readonly string[]).includes(design.secondsSetting))
     && (design.chronographBehavior === undefined || (PARTS.chronographBehaviors as readonly string[]).includes(design.chronographBehavior))
+    && (design.atmosphere === undefined || isValidAtmosphere(design.atmosphere))
     && !secondsConflict(design)
     && hasCompatibleComplications(design);
 }
@@ -276,6 +291,7 @@ export function normalizeDesign(design: WatchDesign): WatchDesign {
   if (design?.lumeStyle !== undefined && (PARTS.lumeStyles as readonly string[]).includes(design.lumeStyle)) normalized.lumeStyle = design.lumeStyle;
   if (typeof design?.strapColor === "string" && /^#[a-f\d]{6}$/i.test(design.strapColor)) normalized.strapColor = design.strapColor;
   if (Array.isArray(design?.catalogReferences)) normalized.catalogReferences = [...new Set(design.catalogReferences.filter(isCatalogReference))].slice(0, MAX_CATALOG_REFERENCES);
+  if (design?.atmosphere !== undefined) normalized.atmosphere = getAtmosphere({ ...normalized, atmosphere: design.atmosphere });
   const active: ActiveComplication[] = [];
   // Selecting None clears the full layout. If only the case changed, preserve valid extras
   // and promote the first surviving function when the old primary no longer fits.

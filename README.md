@@ -30,6 +30,14 @@ Five flagships join REACTOR, each with its own layered dial artwork and function
 
 Use the Black Label collection filter to find all six flagships. Each supports Eclipse, interactive lighting, engraving, saved personal editions, and PNG edition cards. New textures are also available in the design studio. NOCTURNE's display follows civil time (day from 06:00 to 18:00); it does not estimate sunrise, sunset, or lunar phase.
 
+## UNREAL / FLUX & WHITEOUT
+
+Open **Discover UNREAL** or the **UNREAL** collection filter for the first two impossible editions. **FLUX** contains sculpted liquid chrome pools and floating droplets; **WHITEOUT** contains layered snowfall, frost and a glacier bank. Drag horizontally across the dial to disturb its atmosphere, or focus it and use arrow keys or Space. Vertical touch gestures still scroll the studio.
+
+**Atmosphere** opens a live editor for intensity, density, color, gravity and Calm mode. Switch between Liquid and Snow, undo or redo changes, and use **Save creation** to persist them with the watch. These settings also participate in local draft recovery. Calm and reduced-motion settings stop automatic environmental motion while still allowing explicit interaction; hands keep accurate time. Animations pause when hidden or offscreen, and collection previews remain still.
+
+Edition exports copy the currently interacted atmosphere into the full-watch portrait. An additional **Atmosphere** card documents the settings, and the complete ZIP preserves them in the design file. Liquid and snow are also available as dial textures for other designs. Existing saved watches retain their original behavior; no database migration is required.
+
 ## Moon phase and focus controls
 
 Choose **Design studio → Strap & function → Complication → Moon phase** to add a live lunar aperture to any watch. It shows the illuminated lunar disc, phase name, and illumination percentage. [Astronomy Engine](https://github.com/cosinekitty/astronomy/tree/master/source/js#MoonPhase) computes the phase locally from the current UTC instant; no location or external API is required. The disc uses a conventional north-up presentation. Calculations are checked against [US Naval Observatory phase times](https://aa.usno.navy.mil/calculated/moon/phases?year=2026). This is separate from NOCTURNE's civil-time day/night indicator.

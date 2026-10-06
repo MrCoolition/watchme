@@ -3,6 +3,13 @@ import { ACTIVE_COMPLICATIONS, isCatalogReference, isCompatibleDesign, isValidIn
 
 export const familySchema = z.enum(WATCH_FAMILIES);
 const colorSchema = z.string().regex(/^#[a-f0-9]{6}$/i);
+export const atmosphereSchema = z.object({
+  intensity: z.number().finite().min(0).max(100),
+  density: z.number().finite().min(0).max(100),
+  gravity: z.enum(PARTS.atmosphereGravities),
+  color: colorSchema.length(7),
+  calm: z.boolean(),
+}).strict();
 export const designSchema = z.object({
   version: z.literal(1), family: familySchema,
   caseShape: z.enum(PARTS.caseShapes),
@@ -31,6 +38,7 @@ export const designSchema = z.object({
   lumeStyle: z.enum(PARTS.lumeStyles).optional(),
   strapColor: colorSchema.optional(),
   catalogReferences: z.array(z.string().refine(isCatalogReference, "Choose a reference from the watch catalog.")).max(MAX_CATALOG_REFERENCES).optional(),
+  atmosphere: atmosphereSchema.optional(),
 }).strict().refine(isCompatibleDesign, "Choose up to four distinct complications that fit this case and dial layout.");
 export const watchInputSchema = z.object({ id: z.uuid().optional(), name: z.string().trim().min(1).max(60), design: designSchema }).strict();
 const timezoneSchema = z.string().max(100).refine((value) => {

@@ -1,5 +1,6 @@
 import { getComplications, hasComplication } from "@/lib/presets";
 import type { ActiveComplication, WatchDesign } from "@/lib/types";
+import { getAtmosphere, isUnrealFamily, isUnrealTexture } from "@/lib/unreal";
 
 export interface EditionReference {
   id: string;
@@ -26,6 +27,7 @@ export interface EditionDetailSection { id: string; title: string; rows: Edition
 export type EditionPage =
   | { id: "portrait"; label: "Portrait"; kind: "portrait" }
   | { id: "build"; label: "Build sheet"; kind: "build" }
+  | { id: "atmosphere"; label: "Atmosphere"; kind: "atmosphere" }
   | { id: `references-${number}`; label: string; kind: "references"; index: number };
 
 export const EDITION_REFERENCES_PER_PAGE = 12;
@@ -52,6 +54,9 @@ export function getEditionPages(design: WatchDesign): EditionPage[] {
     { id: "portrait", label: "Portrait", kind: "portrait" },
     { id: "build", label: "Build sheet", kind: "build" },
   ];
+  if (isUnrealFamily(design.family) || isUnrealTexture(design.texture) || design.atmosphere !== undefined) {
+    pages.push({ id: "atmosphere", label: "Atmosphere", kind: "atmosphere" });
+  }
   for (let index = 0; index < Math.ceil((design.catalogReferences?.length ?? 0) / EDITION_REFERENCES_PER_PAGE); index++) {
     pages.push({ id: `references-${index + 1}`, label: `References ${index + 1}`, kind: "references", index });
   }
@@ -68,7 +73,7 @@ const TEXTURES: Record<WatchDesign["texture"], string> = {
   carbon: "Carbon weave", meteorite: "Meteorite", guilloche: "Guilloché", mechanical: "Mechanical layers", turbine: "Sculpted turbine",
   solar: "Solar sculpture", abyssal: "Abyssal contours", prismatic: "Iridescent facets", aventurine: "Aventurine sky",
   motherofpearl: "Mother-of-pearl", malachite: "Malachite", lapis: "Lapis lazuli", marble: "Marble", linen: "Linen weave",
-  honeycomb: "Honeycomb", wave: "Wave relief", fume: "Fumé gradient", enamel: "Enamel", sand: "Sand grain",
+  honeycomb: "Honeycomb", wave: "Wave relief", fume: "Fumé gradient", enamel: "Enamel", sand: "Sand grain", liquid: "Liquid atmosphere", snow: "Snow atmosphere",
 };
 const SHAPES: Record<WatchDesign["caseShape"], string> = { octagonal: "Octagonal", cushion: "Cushion", tonneau: "Tonneau", round: "Round", square: "Square", rectangle: "Rectangular", hexagonal: "Hexagonal", oval: "Oval", shield: "Shield" };
 const FINISHES: Record<NonNullable<WatchDesign["caseFinish"]>, string> = { polished: "Polished", brushed: "Brushed", blasted: "Blasted", hammered: "Hammered", damascus: "Damascus pattern" };
@@ -91,12 +96,29 @@ function colorRow(label: string, value: string, note?: string): EditionDetailRow
 }
 
 function dialColorNote(design: WatchDesign): string {
+  if (isUnrealTexture(design.texture)) return "Saved / inactive on the main dial; used when counters are present.";
   if (["motherofpearl", "malachite", "lapis", "marble"].includes(design.texture)) {
     return "Saved base; inactive on the texture-led main dial, used by counters.";
   }
   if (design.texture === "mechanical") return "Base and counters; mechanical artwork has its own palette.";
   if (["turbine", "solar", "abyssal", "prismatic", "aventurine"].includes(design.texture)) return "Tint within the texture's layered palette.";
   return "Base color; texture, shading and light alter its appearance.";
+}
+
+/** A separate page keeps the complete atmosphere out of the six-column build layout. */
+export function getEditionAtmosphereDetails(design: WatchDesign): EditionDetailSection {
+  const atmosphere = getAtmosphere(design);
+  const active = isUnrealTexture(design.texture);
+  const gravity = { down: "Downward", float: "Floating", up: "Upward" } as const;
+  const inactive = "Saved / inactive on the selected dial texture.";
+  return { id: "atmosphere", title: "Atmosphere", rows: [
+    { label: "Display", value: active ? design.texture === "liquid" ? "Liquid atmosphere" : "Snow atmosphere" : "Inactive", note: active ? "Digital material in motion beneath the hands." : "Choose a liquid or snow texture to use these settings." },
+    { label: "Intensity", value: `${atmosphere.intensity}%`, note: active ? "Strength of the atmosphere's motion." : inactive },
+    { label: "Density", value: `${atmosphere.density}%`, note: active ? "Amount of visible material in the dial." : inactive },
+    { label: "Gravity", value: gravity[atmosphere.gravity], note: active ? "Direction of the digital atmosphere." : inactive },
+    colorRow("Atmosphere color", atmosphere.color, active ? design.atmosphere ? "Selected particle and material color." : "Default atmosphere color." : inactive),
+    { label: "Calm mode", value: atmosphere.calm ? "On" : "Off", note: !active ? inactive : atmosphere.calm ? "Automatic motion paused; direct interaction remains available." : "Automatic motion enabled; reduced motion follows your device." },
+  ] };
 }
 
 function strapColorRow(design: WatchDesign): EditionDetailRow {
@@ -165,7 +187,7 @@ export function getEditionDetails(design: WatchDesign): EditionDetailSection[] {
       { label: "Signature", value: design.signature?.trim() || "Not set" },
       { label: "Initials", value: design.initials?.trim().toUpperCase() || "Not set" },
       { label: "Saved references", value: referenceCount ? `${referenceCount} catalog ${referenceCount === 1 ? "reference" : "references"}` : "None", note: referenceCount ? "Design research; no claim of hardware or certification." : "No catalog references saved." },
-      { label: "Edition", value: "Original WATCHMÉ design" },
+      { label: "Edition", value: isUnrealFamily(design.family) ? "Original WATCHMÉ UNREAL design" : "Original WATCHMÉ design" },
     ] },
   ];
 }

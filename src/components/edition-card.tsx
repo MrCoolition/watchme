@@ -4,10 +4,11 @@ import { memo, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent }
 import { Archive, ArrowDownToLine, Check, Download, FileImage, FileJson, Layers3, LoaderCircle, Maximize2, Minus, Plus } from "lucide-react";
 import { Dialog } from "@/components/dialog";
 import { WatchFace } from "@/components/watch-face";
-import { drawEditionCard, editionFilename, editionPng, serializeWatchSvg } from "@/lib/edition-card";
+import { drawEditionCard, editionFilename, editionPng } from "@/lib/edition-card";
+import { captureEditionWatch } from "@/lib/edition-snapshot";
 import { getEditionPages, resolveEditionReferences, type EditionReference } from "@/lib/edition-details";
 import { createEditionArchive, editionArchiveFilename } from "@/lib/edition-archive";
-import { isFlagshipFamily } from "@/lib/presets";
+import { isFlagshipFamily, isUnrealFamily } from "@/lib/presets";
 import type { WatchDesign, WeatherData } from "@/lib/types";
 
 export interface EditionCardDialogProps {
@@ -15,10 +16,11 @@ export interface EditionCardDialogProps {
   lume: boolean; eclipse?: boolean; isDraft?: boolean; onClose: () => void;
   weather?: WeatherData; chronographElapsed?: number; chronographRunning?: boolean;
   lightPosition?: { x: number; y: number };
+  getLiveWatch?: () => SVGSVGElement | null;
 }
 const ExportWatch = memo(WatchFace);
 type ReadyCard = { canvas: HTMLCanvasElement; png?: Blob };
-type EditionSnapshot = { watchSvg: string; capturedAt: string; timezone: string; secondaryTimezone: string };
+type EditionSnapshot = ReturnType<typeof captureEditionWatch> & { capturedAt: string; timezone: string; secondaryTimezone: string };
 
 export function EditionCardDialog(props: EditionCardDialogProps) {
   // Changed inputs start a fresh session; old pending work cannot replace the new edition.
@@ -26,7 +28,8 @@ export function EditionCardDialog(props: EditionCardDialogProps) {
   return <EditionCardSession key={key} {...props}/>;
 }
 
-function EditionCardSession({ design, name, timezone, secondaryTimezone, lume, eclipse = false, isDraft = false, weather, chronographElapsed = 0, chronographRunning = false, lightPosition, onClose }: EditionCardDialogProps) {
+function EditionCardSession({ design, name, timezone, secondaryTimezone, lume, eclipse = false, isDraft = false, weather, chronographElapsed = 0, chronographRunning = false, lightPosition, getLiveWatch, onClose }: EditionCardDialogProps) {
+  const [readLiveWatch] = useState(() => getLiveWatch);
   // Live timer/weather updates behind the dialog must never change an edition already being composed.
   const [presentation] = useState(() => ({
     weather: weather ? { ...weather } : null, chronographElapsed, chronographRunning,
@@ -84,7 +87,7 @@ function EditionCardSession({ design, name, timezone, secondaryTimezone, lume, e
             const svg = watchRef.current?.querySelector("svg");
             if (!svg) throw new Error("The watch preview is not ready. Please try again.");
             snapshot.current = {
-              watchSvg: serializeWatchSvg(svg), capturedAt: new Date().toISOString(),
+              ...captureEditionWatch(svg, readLiveWatch?.()), capturedAt: new Date().toISOString(),
               timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
               secondaryTimezone: secondaryTimezone || "Europe/London",
             };
@@ -120,7 +123,7 @@ function EditionCardSession({ design, name, timezone, secondaryTimezone, lume, e
       });
     });
     return () => { cancelled = true; cancelAnimationFrame(firstFrame); cancelAnimationFrame(secondFrame); };
-  }, [design, name, timezone, secondaryTimezone, lume, eclipse, isDraft, pages, referenceCount, attempt]);
+  }, [design, name, timezone, secondaryTimezone, lume, eclipse, isDraft, pages, referenceCount, attempt, readLiveWatch]);
 
   useEffect(() => {
     if (!ready) return;
@@ -183,7 +186,7 @@ function EditionCardSession({ design, name, timezone, secondaryTimezone, lume, e
       const manifest = {
         format: "watchme-edition", version: 1, name, capturedAt: snapshot.current.capturedAt, isDraft,
         design, timezone: snapshot.current.timezone, secondaryTimezone: snapshot.current.secondaryTimezone,
-        presentation: { lume, eclipse, ...presentation }, references: references.current,
+        presentation: { lume, eclipse, ...presentation, environment: snapshot.current.environment }, references: references.current,
         pages: pages.map(page => ({ ...page, filename: editionFilename(name, design, page) })),
       };
       files.push({ name: "design.json", data: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) });
@@ -193,9 +196,9 @@ function EditionCardSession({ design, name, timezone, secondaryTimezone, lume, e
       if (mounted.current) setError(cause instanceof Error ? cause.message : "The complete edition could not be downloaded. Please try again.");
     } finally { if (mounted.current) setBusy(null); }
   }
-  const pageDescription = selectedPage.kind === "portrait" ? "Your watch, captured in one moment. The finish, personal mark and design fingerprint are all here." : selectedPage.kind === "build" ? "Every selected part, color, function and seconds setting. A complete record of your design, including reference-only specifications." : "Your saved catalog inspiration and its original source. These references accompany your design.";
+  const pageDescription = selectedPage.kind === "portrait" ? "Your watch, captured in one moment. The finish, personal mark and design fingerprint are all here." : selectedPage.kind === "build" ? "Every selected part, color, function and seconds setting. A complete record of your design, including reference-only specifications." : selectedPage.kind === "atmosphere" ? "Your impossible world, documented: motion, density, color, gravity and Calm mode." : "Your saved catalog inspiration and its original source. These references accompany your design.";
 
-  return <Dialog title="Your edition card" eyebrow={isFlagshipFamily(design.family) ? "WATCHMÉ BLACK LABEL / COLLECTOR EDITION" : "WATCHMÉ / COLLECTOR EDITION"} onClose={onClose} wide notice={error ? { message: error, error: true } : null}>
+  return <Dialog title="Your edition card" eyebrow={isUnrealFamily(design.family) ? "WATCHMÉ UNREAL / COLLECTOR EDITION" : isFlagshipFamily(design.family) ? "WATCHMÉ BLACK LABEL / COLLECTOR EDITION" : "WATCHMÉ / COLLECTOR EDITION"} onClose={onClose} wide notice={error ? { message: error, error: true } : null}>
     <div className="edition-workshop">
       <div className="edition-introduction"><p>Your design. Documented in full.</p><span>{isDraft ? "UNSAVED DRAFT" : "CURRENT DESIGN"}<i/>{pages.length} CARDS + DESIGN FILE</span></div>
       <div className="edition-page-tabs" role="tablist" aria-label="Edition pages">{pages.map((page, index) => <button key={page.id} ref={element => { tabRefs.current[index] = element; }} id={`${tabsId}-tab-${page.id}`} role="tab" aria-label={page.label} aria-selected={selectedPage.id === page.id} aria-controls={`${tabsId}-preview`} tabIndex={selectedPage.id === page.id ? 0 : -1} onClick={() => selectPage(index)} onKeyDown={event => navigateTabs(event, index)}><span>{String(index + 1).padStart(2, "0")}</span>{page.label}</button>)}</div>
@@ -208,7 +211,7 @@ function EditionCardSession({ design, name, timezone, secondaryTimezone, lume, e
         </div>
         <aside className="edition-collection-info">
           <div className="edition-page-note"><span className="eyebrow">CARD {String(selectedIndex + 1).padStart(2, "0")} / {String(pages.length).padStart(2, "0")}</span><h3>{selectedPage.label}</h3><p>{pageDescription}</p></div>
-          <div className="edition-pack-contents"><span className="eyebrow">THE COMPLETE EDITION</span><div><FileImage size={16}/><span>{pages.length} PNG cards<small>Portrait, build sheet{referenceCount ? " & references" : ""}</small></span></div><div><FileJson size={16}/><span>Your complete design file<small>Parts, settings, time zones{referenceCount ? ` & ${referenceCount} references` : ""}</small></span></div><div><Layers3 size={16}/><span>One captured moment<small>Every card shares the same watch artwork</small></span></div></div>
+          <div className="edition-pack-contents"><span className="eyebrow">THE COMPLETE EDITION</span><div><FileImage size={16}/><span>{pages.length} PNG cards<small>Portrait, build sheet{pages.some(page => page.kind === "atmosphere") ? ", atmosphere" : ""}{referenceCount ? " & references" : ""}</small></span></div><div><FileJson size={16}/><span>Your complete design file<small>Parts, settings, time zones{referenceCount ? ` & ${referenceCount} references` : ""}</small></span></div><div><Layers3 size={16}/><span>One captured moment<small>Every card shares the same watch artwork</small></span></div></div>
           <div className="edition-download-actions">
             {error && !ready ? <button className="button-primary" onClick={() => { setError(null); setMessage("Preparing your complete edition…"); setAttempt(value => value + 1); }}><LoaderCircle size={16}/>Try again</button> : <>
               <button className="button-primary" aria-label="Download complete edition" disabled={!ready || Boolean(busy)} onClick={downloadComplete}>{busy === "zip" ? <LoaderCircle size={17} className="spin"/> : <Archive size={17}/>}<span>{busy === "zip" ? "Packing your edition…" : "Download complete edition"}<small>ALL CARDS + DESIGN.JSON / ZIP</small></span><ArrowDownToLine size={15}/></button>

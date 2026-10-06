@@ -65,6 +65,11 @@ describe("complete edition details", () => {
     }
     expect(row({ ...base, texture: "prismatic" }, "Dial color").note).toContain("Tint");
     expect(row({ ...base, texture: "mechanical" }, "Dial color").note).toContain("own palette");
+    for (const texture of ["liquid", "snow"] as const) {
+      expect(row({ ...base, texture, dialColor: "#ff0000" }, "Dial color")).toMatchObject({
+        value: "#FF0000", color: "#FF0000", note: "Saved / inactive on the main dial; used when counters are present.",
+      });
+    }
     for (const strap of ["bracelet", "mesh"] as const) expect(row({ ...base, strap, strapColor: "#fedcba" }, "Strap color").note).toContain("tint");
     expect(row({ ...base, strap: "nato" }, "Strap color").color).toBe("#273B40");
     expect(row({ ...base, strap: "leather" }, "Strap color").value).toBe("Black plum gradient");
