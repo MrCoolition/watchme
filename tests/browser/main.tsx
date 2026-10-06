@@ -4,4 +4,5 @@ import { WatchStudio } from "../../src/components/watch-studio";
 import "../../src/app/globals.css";
 import { readFixture } from "./actions";
 
-createRoot(document.getElementById("root")!).render(<WatchStudio initialData={readFixture()}/>);
+const data = readFixture();
+createRoot(document.getElementById("root")!).render(<WatchStudio key={data.account.id} initialData={data}/>);

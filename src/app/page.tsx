@@ -5,10 +5,12 @@ import { WatchStudio } from "@/components/watch-studio";
 import { PrivateEntrance } from "@/components/private-entrance";
 export const dynamic = "force-dynamic";
 export default async function Home() {
-  const status = await getAuthStatus();
+  let status: Awaited<ReturnType<typeof getAuthStatus>>;
+  try { status = await getAuthStatus(); }
+  catch { return <PrivateEntrance unavailable="Access is temporarily unavailable. Please try again in a moment."/>; }
   if (status === "setup-required") return <PrivateEntrance setupRequired/>;
   if (status !== "authenticated") redirect("/login");
   const studio = await loadStudio();
   if (!studio.ok) return <PrivateEntrance unavailable={studio.error}/>;
-  return <WatchStudio initialData={studio.data}/>;
+  return <WatchStudio key={studio.data.account.id} initialData={studio.data}/>;
 }

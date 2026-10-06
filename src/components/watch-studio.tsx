@@ -2,8 +2,9 @@
 
 import { memo, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, Download, Eclipse, Expand, Grid2X2, Heart, Info, LoaderCircle, LogOut, Maximize, Moon, MoveUpRight, Pencil, Plus, Redo2, RotateCcw, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Sun, Timer, Trash2, Undo2, Watch, Snowflake, X } from "lucide-react";
-import { deleteWatch, logout, savePreferences, saveWatch, setFavorite } from "@/app/actions";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, Download, Eclipse, Expand, Grid2X2, Heart, Info, LoaderCircle, LogOut, Maximize, Moon, MoveUpRight, Pencil, Plus, Redo2, RotateCcw, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Sun, Timer, Trash2, Undo2, UserRound, Watch, Snowflake, X } from "lucide-react";
+import { deleteWatch, savePreferences, saveWatch, setFavorite } from "@/app/actions";
+import { logout } from "@/app/account-actions";
 import { ACTIVE_COMPLICATIONS, complicationConflict, FLAGSHIP_PRESETS, getComplications, hasComplication, isCompatibleDesign, isComplicationCompatible, isFlagshipFamily, isUnrealFamily, isUnrealTexture, MAX_ACTIVE_COMPLICATIONS, normalizeDesign, PARTS, PRESETS, secondsConflict, setComplications, UNREAL_PRESETS } from "@/lib/presets";
 import { applyAtelierLook, LUME_COLORS } from "@/lib/atelier";
 import type { Preferences, SavedWatch, StudioData, WatchDesign, WatchPreset } from "@/lib/types";
@@ -23,30 +24,22 @@ import { EditionCardDialog } from "@/components/edition-card";
 import { WatchCatalog } from "@/components/watch-catalog";
 import { UnrealConsole } from "@/components/unreal-console";
 import { getAtmosphere, migrateLegacyUnrealDesign, WHITEOUT_SCENES } from "@/lib/unreal";
+import { AccountSettings } from "@/components/account-settings";
+import { accountStorageKey, readAccountStorage } from "@/lib/device-storage";
 
 const Face = memo(WatchFace);
 const METAL_NAMES: Record<string, string> = { steel: "Brushed steel", titanium: "Titanium", gold: "Yellow gold", rose: "Rose gold", graphite: "Graphite", ceramic: "Black ceramic", bronze: "Bronze", platinum: "Platinum", silver: "Silver", whitegold: "White gold", carbon: "Carbon", sapphire: "Sapphire" };
 const COLORS = [{ name: "Jade", value: "#104D3B" }, { name: "Midnight", value: "#173F65" }, { name: "Obsidian", value: "#141114" }, { name: "Ice", value: "#B8C3CB" }, { name: "Burgundy", value: "#5F2537" }, { name: "Champagne", value: "#B9A584" }, { name: "Ultraviolet", value: "#40346C" }, { name: "Signal", value: "#B74C24" }, { name: "Electric blue", value: "#154BB8" }, { name: "Hot pink", value: "#A11D6B" }, { name: "Glacier", value: "#65B7B0" }, { name: "Lime", value: "#798E23" }];
 const METAL_COLORS: Record<string, string> = { steel: "linear-gradient(135deg,#f1f0e9,#7e8588 45%,#dedfdb)", titanium: "linear-gradient(135deg,#b3b8b8,#585f66 55%,#d1d4d3)", gold: "linear-gradient(135deg,#f9e2a1,#a7803d 55%,#edce7d)", rose: "linear-gradient(135deg,#f1d0b7,#a56751 55%,#e7b695)", graphite: "linear-gradient(135deg,#6b7072,#232729 55%,#656b6d)", ceramic: "linear-gradient(130deg,#090b10,#4d5261 42%,#101117 55%,#020307)", bronze: "linear-gradient(135deg,#d7ac71,#73502c 55%,#bf9461)", platinum: "linear-gradient(135deg,#f6f4ed,#9ca6b1 50%,#f6f8fa)", silver: "linear-gradient(135deg,#ffffff,#929a9f 52%,#dde2e5)", whitegold: "linear-gradient(135deg,#f6efdd,#a4a39b 50%,#e9e7dd)", carbon: "repeating-linear-gradient(45deg,#34383c 0 3px,#181a1d 3px 6px)", sapphire: "linear-gradient(135deg,#effcff77,#52697d33 50%,#daf4ffbb)" };
 type Mode = "collection" | "studio";
-type Modal = "settings" | "instruments" | "save" | "rename" | "delete" | "reset" | "reactor" | "atmosphere" | "edition" | "catalog" | null;
-const draftKey = (id: string) => `watchme.draft.v1.${id}`;
-function readDraft(id: string, fallback: WatchDesign): WatchDesign {
-  // The current key takes precedence; only an absent WHITEOUT draft uses the legacy preset key.
+type Modal = "account" | "settings" | "instruments" | "save" | "rename" | "delete" | "reset" | "reactor" | "atmosphere" | "edition" | "catalog" | null;
+const draftKey = (accountId: string, id: string) => accountStorageKey(accountId, `watchme.draft.v1.${id}`);
+function readDraft(accountId: string, isOwner: boolean, id: string, fallback: WatchDesign): WatchDesign {
   try {
-    const current = localStorage.getItem(draftKey(id));
-    const value = current ?? (id === "whiteout" ? localStorage.getItem(draftKey("flux")) : null);
+    const value = readAccountStorage(accountId, isOwner, `watchme.draft.v1.${id}`, id === "whiteout" ? ["watchme.draft.v1.flux"] : []);
     if (value) {
       const parsed = migrateLegacyUnrealDesign(JSON.parse(value)) as WatchDesign;
-      if (isCompatibleDesign(parsed)) {
-        if (current === null && id === "whiteout") {
-          try {
-            localStorage.setItem(draftKey(id), JSON.stringify(parsed));
-            localStorage.removeItem(draftKey("flux"));
-          } catch { /* Keep the legacy draft if copying it fails. */ }
-        }
-        return parsed;
-      }
+      if (isCompatibleDesign(parsed)) return parsed;
     }
   } catch { /* Invalid drafts cannot override a valid watch. */ }
   return fallback;
@@ -137,6 +130,8 @@ function DesignInspector({ design, onChange, onReset, dirty, lume, onToggleLume 
 }
 
 export function WatchStudio({ initialData }: { initialData: StudioData }) {
+  const [account, setAccount] = useState(initialData.account);
+  const [recoveryPending, setRecoveryPending] = useState(false);
   const [watches, setWatches] = useState(initialData.watches);
   const [preferences, setPreferencesState] = useState(initialData.preferences);
   const [activeId, setActiveId] = useState(initialData.preferences.activeWatchId);
@@ -145,12 +140,12 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
   const [mode, setMode] = useState<Mode>("collection"); const [collectionTab, setCollectionTab] = useState<"originals" | "black-label" | "unreal" | "saved">(initialData.watches.some(watch => watch.id === initialData.preferences.activeWatchId) ? "saved" : "originals"); const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [lume, setLume] = useState(false); const [focus, setFocus] = useState(false); const [keepAwake, setKeepAwake] = useState(false); const [mobileInspector, setMobileInspector] = useState(false);
   const [eclipse, setEclipse] = useState(false); const [interactiveLight, setInteractiveLight] = useState(true);
-  const display = useDisplayPreferences(); const [focusFraming, setFocusFraming] = useState<"face" | "dial">("face"); const [inspectorTab, setInspectorTab] = useState<"details" | "atelier">("details");
+  const display = useDisplayPreferences(account.id, account.isOwner); const [focusFraming, setFocusFraming] = useState<"face" | "dial">("face"); const [inspectorTab, setInspectorTab] = useState<"details" | "atelier">("details");
   const framing = focus ? focusFraming : display.framing;
   const [modal, setModal] = useState<Modal>(null); const [name, setName] = useState(""); const [busy, setBusy] = useState(false); const [toast, setToast] = useState<{ message: string; error?: boolean } | null>(null); const [ready, setReady] = useState(false);
   const preferenceRef = useRef(preferences); const initialRef = useRef(initial); const preferencesQueue = useRef<Promise<unknown>>(Promise.resolve()); const inspectorRef = useRef<HTMLElement>(null);
   const focusIntent = useRef(false); const fullscreenRequest = useRef<Promise<void> | null>(null); const fullscreenExit = useRef<Promise<void> | null>(null);
-  const timers = useTimers(); const weather = useWeather(preferences.location, preferences.unit); const wakeLock = useWakeLock(focus && keepAwake);
+  const timers = useTimers(account.id, account.isOwner); const weather = useWeather(preferences.location, preferences.unit, account.id, account.isOwner); const wakeLock = useWakeLock(focus && keepAwake);
   const selected = watches.find(watch => watch.id === activeId) || PRESETS.find(preset => preset.id === activeId) || PRESETS[0];
   const preset = PRESETS.find(item => item.id === selected.design.family) || PRESETS[0]; const design = history[historyIndex];
   const isReactor = design.family === "reactor"; const isFlagship = isFlagshipFamily(design.family); const isChronograph = hasComplication(design, "chronograph");
@@ -161,6 +156,15 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
   const lighting = useReactiveLight(hasReactiveLight && interactiveLight);
   const dirty = JSON.stringify(design) !== JSON.stringify(selected.design); const isSaved = !('edition' in selected);
   const notify = useCallback((message: string, error = false) => setToast({ message, error }), []);
+  async function lockStudio() {
+    setBusy(true);
+    try {
+      await logout();
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Signing out must unmount the previous account's collection and device state.
+      window.location.assign("/login");
+    }
+    catch { notify("Couldn’t lock the studio. Please try again.", true); setBusy(false); }
+  }
   const leaveBrowserFullscreen = useCallback(async () => {
     if (fullscreenExit.current) return fullscreenExit.current;
     if (!document.fullscreenElement) return;
@@ -180,16 +184,16 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
   }, [leaveBrowserFullscreen]);
   const persistPreferences = useCallback(async (next: Preferences, reportSuccess = false) => {
     preferenceRef.current = next; setPreferencesState(next);
-    const operation = preferencesQueue.current.then(async () => { try { const result = await savePreferences(next); if (!result.ok) { notify(result.error, true); return false; } if (reportSuccess) notify("Preferences saved."); return true; } catch { notify("Couldn’t sync preferences. Please try again.", true); return false; } });
+    const operation = preferencesQueue.current.then(async () => { try { const result = await savePreferences(next, account.id); if (!result.ok) { notify(result.error, true); return false; } if (reportSuccess) notify("Preferences saved."); return true; } catch { notify("Couldn’t sync preferences. Please try again.", true); return false; } });
     preferencesQueue.current = operation; return operation;
-  }, [notify]);
+  }, [account.id, notify]);
   useEffect(() => {
-    const start = initialRef.current; const restored = readDraft(start.id, start.design);
+    const start = initialRef.current; const restored = readDraft(account.id, account.isOwner, start.id, start.design);
     if (JSON.stringify(restored) !== JSON.stringify(start.design)) { setHistory([start.design, restored]); setHistoryIndex(1); setMode("studio"); notify("Your unfinished design is right where you left it."); }
     if (!preferenceRef.current.primaryTimezone) { const zone = Intl.DateTimeFormat().resolvedOptions().timeZone; void persistPreferences({ ...preferenceRef.current, primaryTimezone: zone }); }
     setReady(true);
-  }, [notify, persistPreferences]);
-  useEffect(() => { if (!ready) return; try { if (dirty) localStorage.setItem(draftKey(activeId), JSON.stringify(design)); else localStorage.removeItem(draftKey(activeId)); } catch { /* Keep the editor working even without device storage. */ } }, [activeId, design, dirty, ready]);
+  }, [account.id, account.isOwner, notify, persistPreferences]);
+  useEffect(() => { if (!ready) return; try { if (dirty) localStorage.setItem(draftKey(account.id, activeId), JSON.stringify(design)); else localStorage.removeItem(draftKey(account.id, activeId)); } catch { /* Keep the editor working even without device storage. */ } }, [account.id, activeId, design, dirty, ready]);
   useEffect(() => { if (!toast) return; const timeout = setTimeout(() => setToast(null), toast.error ? 10000 : 4500); return () => clearTimeout(timeout); }, [toast]);
   useEffect(() => {
     if (!mobileInspector) return;
@@ -225,26 +229,26 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
   }, [exitFocus, leaveBrowserFullscreen]);
   const selectWatch = useCallback((id: string) => {
     const item = watches.find(watch => watch.id === id) || PRESETS.find(watch => watch.id === id); if (!item) return;
-    const restored = readDraft(id, item.design); setActiveId(id); setHistory(JSON.stringify(restored) !== JSON.stringify(item.design) ? [item.design, restored] : [item.design]); setHistoryIndex(JSON.stringify(restored) !== JSON.stringify(item.design) ? 1 : 0);
+    const restored = readDraft(account.id, account.isOwner, id, item.design); setActiveId(id); setHistory(JSON.stringify(restored) !== JSON.stringify(item.design) ? [item.design, restored] : [item.design]); setHistoryIndex(JSON.stringify(restored) !== JSON.stringify(item.design) ? 1 : 0);
     void persistPreferences({ ...preferenceRef.current, activeWatchId: id });
-  }, [watches, persistPreferences]);
+  }, [account.id, account.isOwner, watches, persistPreferences]);
   const favoriteWatch = useCallback(async (id: string) => {
     const saved = watches.find(watch => watch.id === id);
-    if (saved) { try { const result = await setFavorite(id, !saved.favorite); if (!result.ok) notify(result.error, true); else setWatches(current => current.map(watch => watch.id === id ? result.data : watch)); } catch { notify("Couldn’t update this favorite. Please try again.", true); } }
+    if (saved) { try { const result = await setFavorite(id, !saved.favorite, account.id); if (!result.ok) notify(result.error, true); else setWatches(current => current.map(watch => watch.id === id ? result.data : watch)); } catch { notify("Couldn’t update this favorite. Please try again.", true); } }
     else { const list = preferenceRef.current.favoritePresets; await persistPreferences({ ...preferenceRef.current, favoritePresets: list.includes(id) ? list.filter(value => value !== id) : [...list, id] }); }
-  }, [watches, notify, persistPreferences]);
+  }, [account.id, watches, notify, persistPreferences]);
   function changeDesign(next: WatchDesign) { setHistory(current => [...current.slice(0, historyIndex + 1), next].slice(-60)); setHistoryIndex(Math.min(historyIndex + 1, 59)); }
   function openNameModal(type: "save" | "rename") { setToast(null); setName(type === "save" && !isSaved ? `${selected.name} No. 01` : selected.name); setModal(type); }
   async function saveCurrent(event: React.FormEvent) {
     event.preventDefault(); setBusy(true);
-    try { const result = await saveWatch({ id: isSaved ? selected.id : undefined, name: name.trim(), design: modal === "rename" ? selected.design : design }); if (!result.ok) { notify(result.error, true); return; }
+    try { const result = await saveWatch({ id: isSaved ? selected.id : undefined, name: name.trim(), design: modal === "rename" ? selected.design : design }, account.id); if (!result.ok) { notify(result.error, true); return; }
       const watch = result.data; setWatches(current => current.some(item => item.id === watch.id) ? current.map(item => item.id === watch.id ? watch : item) : [watch, ...current]);
-      if (modal !== "rename") { try { localStorage.removeItem(draftKey(activeId)); } catch { /* Optional browser storage. */ } setHistory([watch.design]); setHistoryIndex(0); }
+      if (modal !== "rename") { try { localStorage.removeItem(draftKey(account.id, activeId)); } catch { /* Optional browser storage. */ } setHistory([watch.design]); setHistoryIndex(0); }
       setActiveId(watch.id); setCollectionTab("saved"); setFavoritesOnly(false); const preferencesSaved = await persistPreferences({ ...preferenceRef.current, activeWatchId: watch.id }); setModal(null); if (preferencesSaved) notify(modal === "rename" ? "A new name. The same excellent taste." : "Your creation is in the collection.");
     } catch { notify("Couldn’t save your watch. Your draft is still here.", true); } finally { setBusy(false); }
   }
-  async function duplicate() { if (busy) return; setBusy(true); try { const result = await saveWatch({ name: `${selected.name} II`, design }); if (!result.ok) { notify(result.error, true); return; } setWatches(current => [result.data, ...current]); setActiveId(result.data.id); setHistory([result.data.design]); setHistoryIndex(0); setCollectionTab("saved"); setFavoritesOnly(false); await persistPreferences({ ...preferenceRef.current, activeWatchId: result.data.id }); notify("A fresh canvas. Make this one yours."); } catch { notify("Couldn’t duplicate this watch. Please try again.", true); } finally { setBusy(false); } }
-  async function removeCurrent() { if (!isSaved) return; setBusy(true); try { const result = await deleteWatch(selected.id); if (!result.ok) { notify(result.error, true); return; } setWatches(current => current.filter(watch => watch.id !== selected.id)); try { localStorage.removeItem(draftKey(selected.id)); } catch {} setActiveId(PRESETS[0].id); setHistory([PRESETS[0].design]); setHistoryIndex(0); setModal(null); await persistPreferences({ ...preferenceRef.current, activeWatchId: PRESETS[0].id }); notify("Watch removed from your collection."); } catch { notify("Couldn’t remove this watch. Please try again.", true); } finally { setBusy(false); } }
+  async function duplicate() { if (busy) return; setBusy(true); try { const result = await saveWatch({ name: `${selected.name} II`, design }, account.id); if (!result.ok) { notify(result.error, true); return; } setWatches(current => [result.data, ...current]); setActiveId(result.data.id); setHistory([result.data.design]); setHistoryIndex(0); setCollectionTab("saved"); setFavoritesOnly(false); await persistPreferences({ ...preferenceRef.current, activeWatchId: result.data.id }); notify("A fresh canvas. Make this one yours."); } catch { notify("Couldn’t duplicate this watch. Please try again.", true); } finally { setBusy(false); } }
+  async function removeCurrent() { if (!isSaved) return; setBusy(true); try { const result = await deleteWatch(selected.id, account.id); if (!result.ok) { notify(result.error, true); return; } setWatches(current => current.filter(watch => watch.id !== selected.id)); try { localStorage.removeItem(draftKey(account.id, selected.id)); } catch {} setActiveId(PRESETS[0].id); setHistory([PRESETS[0].design]); setHistoryIndex(0); setModal(null); await persistPreferences({ ...preferenceRef.current, activeWatchId: PRESETS[0].id }); notify("Watch removed from your collection."); } catch { notify("Couldn’t remove this watch. Please try again.", true); } finally { setBusy(false); } }
   async function enterFocus() {
     setFocusFraming(display.edgeToEdge ? "dial" : "face");
     focusIntent.current = true; setFocus(true); setMobileInspector(false);
@@ -266,8 +270,8 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
   function discoverUnreal() { selectWatch("whiteout"); setCollectionTab("unreal"); setFavoritesOnly(false); setMode("collection"); setMobileInspector(false); }
   function openAtmosphere() { setMode("studio"); setMobileInspector(false); setModal("atmosphere"); }
   return <div className={`studio-shell ${focus ? "is-focus" : ""} ${lume ? "is-lume" : ""} ${isReactor ? "is-reactor" : ""} ${isFlagship ? "is-flagship" : ""} ${isUnreal ? "is-unreal" : ""} ${hasAtmosphere ? "has-atmosphere" : ""} ${isFlagship && eclipse ? "is-eclipse" : ""} ${isChronograph ? "has-chronograph" : ""} ${focus && isChronograph && display.chronographPanel ? "has-focus-chronograph-panel" : ""} framing-${framing} ${display.digitalTime ? "has-digital-time" : ""}`}>
-    <aside className="navigation-rail"><Link className="brand-symbol" href="/" aria-label="WATCHMÉ home"><span/><span/><span/></Link><nav aria-label="Workspace"><button className={`rail-button ${mode === "collection" ? "active" : ""}`} aria-label="Collection" title="Collection" onClick={() => { setMode("collection"); setMobileInspector(false); }}><Grid2X2 size={20}/></button><button className={`rail-button ${mode === "studio" ? "active" : ""}`} aria-label="Design studio" title="Design studio" onClick={() => { setMode("studio"); setMobileInspector(true); }}><SlidersHorizontal size={20}/></button><button className="rail-button" aria-label="Chronograph and countdown" title="Instruments" onClick={() => setModal("instruments")}><Timer size={21}/></button><button className="rail-button" aria-label="Enter focus mode" title="Focus mode" onClick={() => void enterFocus()}><Maximize size={19}/></button></nav><div className="rail-bottom"><button className="rail-button" aria-label="Settings" title="Settings" onClick={() => setModal("settings")}><Settings2 size={19}/></button><button className="profile-button" title="Lock the studio" aria-label="Lock the studio" onClick={() => void logout()}><LogOut size={16}/></button></div></aside>
-    <div className="workspace"><header className="workspace-header"><Link className="wordmark" href="/">WATCHMÉ<span className="wordmark-dot">●</span></Link><div className="header-divider"/><span className="workspace-title">Your private watch studio</span><nav className="header-nav" aria-label="Views"><button className={mode === "collection" ? "active" : ""} onClick={() => { setMode("collection"); setMobileInspector(false); }}>Collection</button><button className={mode === "studio" ? "active" : ""} onClick={() => { setMode("studio"); setMobileInspector(true); }}>Design studio<span className="tiny-plus">+</span></button></nav><button className="header-catalog" aria-label="Parts catalog" onClick={openCatalog}><BookOpen size={16}/><span>Parts catalog</span></button><button className="icon-button mobile-settings" aria-label="Settings" onClick={() => setModal("settings")}><Settings2 size={17}/></button><span className="private-badge"><span className="status-dot"/> PRIVATE COLLECTION</span></header>
+    <aside className="navigation-rail"><Link className="brand-symbol" href="/" aria-label="WATCHMÉ home"><span/><span/><span/></Link><nav aria-label="Workspace"><button className={`rail-button ${mode === "collection" ? "active" : ""}`} aria-label="Collection" title="Collection" onClick={() => { setMode("collection"); setMobileInspector(false); }}><Grid2X2 size={20}/></button><button className={`rail-button ${mode === "studio" ? "active" : ""}`} aria-label="Design studio" title="Design studio" onClick={() => { setMode("studio"); setMobileInspector(true); }}><SlidersHorizontal size={20}/></button><button className="rail-button" aria-label="Chronograph and countdown" title="Instruments" onClick={() => setModal("instruments")}><Timer size={21}/></button><button className="rail-button" aria-label="Enter focus mode" title="Focus mode" onClick={() => void enterFocus()}><Maximize size={19}/></button></nav><div className="rail-bottom"><button className="rail-button" aria-label="Settings" title="Settings" onClick={() => setModal("settings")}><Settings2 size={19}/></button><button className="profile-button" title="Lock the studio" aria-label="Lock the studio" onClick={() => void lockStudio()}><LogOut size={16}/></button></div></aside>
+    <div className="workspace"><header className="workspace-header"><Link className="wordmark" href="/">WATCHMÉ<span className="wordmark-dot">●</span></Link><div className="header-divider"/><span className="workspace-title">Your private watch studio</span><nav className="header-nav" aria-label="Views"><button className={mode === "collection" ? "active" : ""} onClick={() => { setMode("collection"); setMobileInspector(false); }}>Collection</button><button className={mode === "studio" ? "active" : ""} onClick={() => { setMode("studio"); setMobileInspector(true); }}>Design studio<span className="tiny-plus">+</span></button></nav><button className="header-catalog" aria-label="Parts catalog" onClick={openCatalog}><BookOpen size={16}/><span>Parts catalog</span></button><button className="icon-button mobile-settings" aria-label="Settings" onClick={() => setModal("settings")}><Settings2 size={17}/></button><button className={`account-open ${account.isOwner && !account.hasRecoveryCode ? "needs-recovery" : ""}`} aria-label="Account settings" title={account.username} onClick={() => { setMobileInspector(false); setModal("account"); }}><UserRound size={17}/><span>{account.username}</span>{account.isOwner && !account.hasRecoveryCode && <i aria-hidden="true"/>}</button></header>
       <main id="main-content">{!isUnreal && !isFlagship && <section className="unreal-discovery" aria-label="Discover WHITEOUT collection"><div className="unreal-discovery-intro"><span>NEW COLLECTION / {String(UNREAL_PRESETS.length).padStart(2, "0")}</span><strong>WHITEOUT</strong><p>Six snow worlds. One private escape.</p></div><div className="unreal-discovery-actions"><button className="unreal-discover-button" aria-label="Discover WHITEOUT" onClick={discoverUnreal}>Discover WHITEOUT<ArrowUpRight size={16}/></button><button className="unreal-discover-secondary" aria-label="Explore Black Label" onClick={() => discoverFlagship("phantom")}>Black Label<ArrowUpRight size={13}/></button><button className="unreal-discover-secondary" aria-label="Discover REACTOR" onClick={() => discoverFlagship("reactor")}>REACTOR<ArrowUpRight size={13}/></button></div></section>}<div className="main-stage"><section className="showcase" aria-label={`${selected.name} live watch`} style={{ "--watch-glow": `${design.dialColor}28` } as CSSProperties}>
         <div className="hero-topline"><span className="eyebrow">{isUnreal ? `WHITEOUT / ${isUnrealTexture(design.texture) ? whiteoutScene.name.toUpperCase() : "YOUR CREATION"}` : isFlagship ? "BLACK LABEL / " + complicationsSummary(design).toUpperCase() : mode === "studio" ? "THE DESIGN STUDIO" : "TIME. ON YOUR TERMS."}</span><span className="edition-index">{String(activeIndex).padStart(2, "0")}<span> / {String(PRESETS.length).padStart(2, "0")}</span></span></div>
         <div className="watch-story"><div className="edition-pill"><span/>{isUnreal && isSaved ? "A WHITEOUT ORIGINAL BY YOU" : isSaved ? "A WATCHMÉ ORIGINAL BY YOU" : preset.category}</div><h1 className={selected.name.length > 18 ? "long-name" : undefined} title={selected.name}>{selected.name}</h1><p>{isUnreal && isUnrealTexture(design.texture) ? whiteoutScene.description : isSaved ? "Considered in every detail. Entirely yours." : preset.description}</p><span className="watch-reference">WM—{String(activeIndex).padStart(3, "0")} <span>/</span> {isUnreal ? "WHITEOUT EDITION" : isSaved ? "CUSTOM EDITION" : preset.edition.split(" / ")[0]}</span></div>
@@ -297,7 +301,8 @@ export function WatchStudio({ initialData }: { initialData: StudioData }) {
     {focus && isChronograph && display.chronographPanel && <ChronographDeck timers={timers} onLapHistory={() => setModal("instruments")} immersive/>}
     {toast && !modal && <div className={`toast ${toast.error ? "toast-error" : ""}`} role={toast.error ? "alert" : "status"}>{toast.error ? <X size={16}/> : <Check size={16}/>}<span>{toast.message}</span><button className="icon-button" aria-label="Dismiss notification" onClick={() => setToast(null)}><X size={14}/></button></div>}
     {modal === "catalog" && <WatchCatalog design={design} name={selected.name} timezone={preferences.primaryTimezone || "UTC"} secondaryTimezone={preferences.secondaryTimezone} lume={lume} weather={weather.weather ?? undefined} onChange={changeDesign} onClose={() => setModal(null)} onTool={tool => setModal(tool)}/> }
-    {modal === "settings" && <Dialog notice={toast?.error ? toast : null} title="Set your own pace." eyebrow="PREFERENCES" onClose={() => setModal(null)} wide><StudioSettings preferences={preferences} busy={busy} onLock={() => void logout()} onSave={async next => { setBusy(true); const success = await persistPreferences(next, true); setBusy(false); if (success) setModal(null); }}/></Dialog>}
+    {modal === "settings" && <Dialog notice={toast?.error ? toast : null} title="Set your own pace." eyebrow="PREFERENCES" onClose={() => setModal(null)} wide><button className="settings-account-link" aria-label="Account settings" onClick={() => setModal("account")}><UserRound size={19}/><span><strong>{account.username}</strong><small>{account.hasRecoveryCode ? "Passphrase and recovery" : "Add a recovery code to protect your collection"}</small></span><ArrowUpRight size={16}/></button><StudioSettings preferences={preferences} busy={busy} onLock={() => void lockStudio()} onSave={async next => { setBusy(true); const success = await persistPreferences(next, true); setBusy(false); if (success) setModal(null); }}/></Dialog>}
+    {modal === "account" && <Dialog title="Your account." eyebrow={account.username} onClose={() => { if (!recoveryPending) setModal(null); }}><AccountSettings account={account} onRecoveryVisibilityChange={setRecoveryPending} onRecoveryCreated={() => setAccount(current => ({ ...current, hasRecoveryCode: true }))} onLock={() => void lockStudio()} onPreferences={() => setModal("settings")}/></Dialog>}
     {modal === "instruments" && <Dialog notice={toast?.error ? toast : null} title="Every second counts." eyebrow="THE INSTRUMENTS" onClose={() => setModal(null)}><Instruments timers={timers}/></Dialog>}
     {modal === "atmosphere" && <Dialog title="A world of your own." eyebrow={`${selected.name} / WHITEOUT`} onClose={() => setModal(null)} wide><UnrealConsole design={design} name={selected.name} timezone={preferences.primaryTimezone || "UTC"} secondaryTimezone={preferences.secondaryTimezone} lume={lume} weather={weather.weather ?? undefined} chronographElapsed={isChronograph ? timers.elapsed : 0} chronographRunning={isChronograph && timers.state.chronograph.startedAt !== null} dirty={dirty} canUndo={historyIndex > 0} canRedo={historyIndex < history.length - 1} onChange={changeDesign} onUndo={() => setHistoryIndex(index => index - 1)} onRedo={() => setHistoryIndex(index => index + 1)} onSave={() => openNameModal("save")} onClose={() => setModal(null)}/></Dialog>}
     {modal === "reactor" && <Dialog title="Set the atmosphere." eyebrow={`${selected.name} / BLACK LABEL`} onClose={() => setModal(null)}><ReactorConsole name={selected.name} chronograph={isChronograph} timers={timers} eclipse={eclipse} onToggleEclipse={() => setEclipse(!eclipse)} interactiveLight={interactiveLight} onToggleLight={() => setInteractiveLight(!interactiveLight)} onResetLight={lighting.reset} onOpenInstruments={() => setModal("instruments")} onExport={() => setModal("edition")}/></Dialog>}

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile, mkdir } from 'node:fs/promises';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { chromium } from '@playwright/test';
-import { sealData } from 'iron-session';
+import { ownerVerificationSession } from './verification-session.mjs';
 
 // Run only against this project's deployment. The private credentials stay inside this process.
 // Local verification separately tests the actual passphrase login; this tests deployed sessions/actions.
@@ -10,8 +10,7 @@ const config = JSON.parse(await readFile(process.argv[2] || '.setup/preview-acce
 const target = new URL(config.url);
 assert.ok(/^watchme(?:-[a-z0-9-]+)?\.vercel\.app$/.test(target.hostname));
 assert.ok(['watchme', 'watchme_preview'].includes(config.schema));
-assert.ok(process.env.SESSION_SECRET && process.env.WATCHME_PASSWORD_HASH);
-const session = await sealData({ authenticated: true, issuedAt: Date.now(), authVersion: createHash('sha256').update(process.env.WATCHME_PASSWORD_HASH).digest('hex') }, { password: process.env.SESSION_SECRET, ttl: 3600 });
+const session = await ownerVerificationSession(config.schema);
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
 context.setDefaultTimeout(20000);
@@ -82,13 +81,14 @@ async function assertCatalog(verifiedPage) {
 
 try {
   await page.goto(config.accessUrl || config.url, { waitUntil: 'networkidle', timeout: 60000 });
-  await page.getByLabel('YOUR PRIVATE PASSPHRASE', { exact: true }).waitFor({ timeout: 30000 });
+  await page.getByLabel('Passphrase', { exact: true }).waitFor({ timeout: 30000 });
   stage = 'checking private API boundary';
   assert.equal((await context.request.get(`${config.url}/api/weather?lat=40.7&lon=-74&unit=fahrenheit`)).status(), 401);
   assert.equal((await context.request.get(`${config.url}/api/locations?q=London`)).status(), 401);
   if (loginPassphrase) {
     stage = 'logging in with the configured passphrase';
-    await page.getByLabel('YOUR PRIVATE PASSPHRASE', { exact: true }).fill(loginPassphrase);
+    await page.getByLabel('Username', { exact: true }).fill('coolition');
+    await page.getByLabel('Passphrase', { exact: true }).fill(loginPassphrase);
     await page.getByRole('button', { name: 'Enter the studio', exact: true }).click();
     await page.locator('.watch-story h1').waitFor({ timeout: 30000 });
     loginPassphrase = undefined;

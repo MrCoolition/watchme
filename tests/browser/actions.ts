@@ -2,15 +2,17 @@
 import { DEFAULT_PREFERENCES, type ActionResult, type Preferences, type SavedWatch, type StudioData, type WatchDesign } from "../../src/lib/types";
 import { watchInputSchema, preferencesSchema } from "../../src/lib/validation";
 import { migrateLegacyUnrealDesign, migrateLegacyUnrealPreferences } from "../../src/lib/unreal";
+import { OWNER_ACCOUNT_ID, OWNER_USERNAME } from "../../src/lib/account-constants";
 
 const STORAGE_KEY = "watchme.fixture.studio.v1";
+const account = { id: OWNER_ACCOUNT_ID, username: OWNER_USERNAME, isOwner: true, hasRecoveryCode: true };
 export function readFixture(): StudioData {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     const data = JSON.parse(saved) as StudioData;
-    return { watches: data.watches.map(watch => ({ ...watch, design: migrateLegacyUnrealDesign(watch.design) as WatchDesign })), preferences: migrateLegacyUnrealPreferences(data.preferences) as Preferences };
+    return { account: data.account ?? account, watches: data.watches.map(watch => ({ ...watch, design: migrateLegacyUnrealDesign(watch.design) as WatchDesign })), preferences: migrateLegacyUnrealPreferences(data.preferences) as Preferences };
   }
-  const data: StudioData = { watches: [], preferences: { ...DEFAULT_PREFERENCES, primaryTimezone: "America/New_York", location: new URLSearchParams(location.search).has("weather") ? { name: "New York", latitude: 40.7128, longitude: -74.006, timezone: "America/New_York", country: "United States" } : null } };
+  const data: StudioData = { account, watches: [], preferences: { ...DEFAULT_PREFERENCES, primaryTimezone: "America/New_York", location: new URLSearchParams(location.search).has("weather") ? { name: "New York", latitude: 40.7128, longitude: -74.006, timezone: "America/New_York", country: "United States" } : null } };
   writeFixture(data);
   return data;
 }

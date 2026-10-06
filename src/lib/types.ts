@@ -70,6 +70,7 @@ export interface SavedWatch { id: string; name: string; design: WatchDesign; fav
 export interface LocationChoice { name: string; latitude: number; longitude: number; timezone: string; country?: string; }
 export interface Preferences { primaryTimezone: string; secondaryTimezone: string; unit: "fahrenheit" | "celsius"; location: LocationChoice | null; activeWatchId: string; favoritePresets: string[]; }
 export interface WeatherData { temperature: number; feelsLike: number; high: number; low: number; code: number; description: string; isDay: boolean; observedAt: string; fetchedAt: string; }
-export interface StudioData { watches: SavedWatch[]; preferences: Preferences; }
+export interface AccountSummary { id: string; username: string; isOwner: boolean; hasRecoveryCode: boolean; }
+export interface StudioData { account: AccountSummary; watches: SavedWatch[]; preferences: Preferences; }
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 export const DEFAULT_PREFERENCES: Preferences = { primaryTimezone: "", secondaryTimezone: "Europe/London", unit: "fahrenheit", location: null, activeWatchId: "monolith", favoritePresets: [] };

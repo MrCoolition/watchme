@@ -6,6 +6,7 @@ export default defineConfig({
   root: fileURLToPath(new URL("./tests/browser", import.meta.url)),
   resolve: { alias: [
     { find: "@/app/actions", replacement: fileURLToPath(new URL("./tests/browser/actions.ts", import.meta.url)) },
+    { find: "@/app/account-actions", replacement: fileURLToPath(new URL("./tests/browser/account-actions.ts", import.meta.url)) },
     { find: "next/link", replacement: fileURLToPath(new URL("./tests/browser/link.tsx", import.meta.url)) },
     { find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
   ] },

@@ -23,7 +23,7 @@ test("phone chronograph controls move the real hands, record laps, pause, restor
   await page.reload();
   await expect(page.getByRole("button", { name: "Resume chronograph", exact: true })).toBeVisible();
   await expect(readout).toHaveText(pausedTime!);
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("watchme.timers.v1")!));
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("watchme.account.00000000-0000-4000-8000-000000000001.timers.v1")!));
   expect(stored.chronograph.laps).toHaveLength(1);
   await page.getByRole("button", { name: "Reset chronograph", exact: true }).click();
   await page.clock.fastForward(1000);

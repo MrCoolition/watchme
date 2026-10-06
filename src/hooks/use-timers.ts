@@ -1,9 +1,11 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { elapsedAt, INITIAL_TIMERS, remainingAt, restoreTimers, toggleChronograph, toggleCountdown, type TimerState } from "@/lib/timers";
+import { accountStorageKey, readAccountStorage } from "@/lib/device-storage";
 
 const KEY = "watchme.timers.v1";
-export function useTimers() {
+export function useTimers(accountId: string, isOwner: boolean) {
+  const storageKey = accountStorageKey(accountId, KEY);
   const [state, setState] = useState<TimerState>(INITIAL_TIMERS);
   const [now, setNow] = useState(0);
   const [ready, setReady] = useState(false);
@@ -13,10 +15,10 @@ export function useTimers() {
   useEffect(() => {
     // Hydration must happen after the server render: browser storage is the timer's external source of truth.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    try { const saved = localStorage.getItem(KEY); if (saved) setState(restoreTimers(JSON.parse(saved))); } catch { /* Private browsing still supports in-memory timers. */ }
+    try { const saved = readAccountStorage(accountId, isOwner, KEY); setState(saved ? restoreTimers(JSON.parse(saved)) : INITIAL_TIMERS); } catch { /* Private browsing still supports in-memory timers. */ }
     setNow(Date.now()); setReady(true);
-  }, []);
-  useEffect(() => { if (ready) { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* Keep the live timer usable if storage is unavailable. */ } } }, [state, ready]);
+  }, [accountId, isOwner]);
+  useEffect(() => { if (ready) { try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { /* Keep the live timer usable if storage is unavailable. */ } } }, [state, ready, storageKey]);
   const completeCountdown = useCallback(() => {
     setState(current => ({ ...current, countdown: { ...current.countdown, endsAt: null, remaining: 0, completed: true } }));
     if (sound && audio.current && !notified.current) {

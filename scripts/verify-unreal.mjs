@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFile, mkdir } from 'node:fs/promises';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { chromium } from '@playwright/test';
-import { sealData } from 'iron-session';
+import { ownerVerificationSession } from './verification-session.mjs';
 
 const config = JSON.parse(await readFile(process.argv[2] || '.setup/preview-access.json', 'utf8'));
 const target = new URL(config.url);
 assert.ok(/^watchme(?:-[a-z0-9-]+)?\.vercel\.app$/.test(target.hostname));
 assert.ok(['watchme', 'watchme_preview'].includes(config.schema));
-const session = await sealData({ authenticated: true, issuedAt: Date.now(), authVersion: createHash('sha256').update(process.env.WATCHME_PASSWORD_HASH).digest('hex') }, { password: process.env.SESSION_SECRET, ttl: 3600 });
+const session = await ownerVerificationSession(config.schema);
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1050 } });
 context.setDefaultTimeout(20000);
