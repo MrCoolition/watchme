@@ -1,5 +1,5 @@
 import type { ActiveComplication, Complication, WatchDesign, WatchFamily, WatchPreset } from "./types";
-import { ATMOSPHERE_GRAVITIES, getAtmosphere, isUnrealFamily, isValidAtmosphere, UNREAL_FAMILIES, UNREAL_TEXTURES } from "./unreal";
+import { ATMOSPHERE_GRAVITIES, getAtmosphere, isUnrealFamily, isValidAtmosphere, migrateLegacyUnrealDesign, UNREAL_FAMILIES, UNREAL_TEXTURES, WHITEOUT_SCENE_IDS } from "./unreal";
 export { isUnrealFamily, isUnrealTexture, UNREAL_FAMILIES } from "./unreal";
 
 export const FLAGSHIP_FAMILIES = ["reactor", "phantom", "helios", "abyss", "prism", "nocturne"] as const;
@@ -17,6 +17,7 @@ export const PARTS = {
   metals: ["steel", "titanium", "gold", "rose", "graphite", "ceramic", "bronze", "platinum", "silver", "whitegold", "carbon", "sapphire"],
   textures: ["grid", "horizontal", "sunburst", "lacquer", "skeleton", "carbon", "meteorite", "guilloche", "mechanical", "turbine", "solar", "abyssal", "prismatic", "aventurine", "motherofpearl", "malachite", "lapis", "marble", "linen", "honeycomb", "wave", "fume", "enamel", "sand", ...UNREAL_TEXTURES],
   atmosphereGravities: ATMOSPHERE_GRAVITIES,
+  atmosphereScenes: WHITEOUT_SCENE_IDS,
   bezels: ["polished", "fluted", "iced", "ceramic", "coined", "scalloped", "screws"],
   secondsMotions: ["sweep", "tick", "stepped"],
   secondsIndications: ["running", "chronograph", "none"],
@@ -97,14 +98,34 @@ export const PRESETS: WatchPreset[] = [
     design: { version: 1, family: "nocturne", caseShape: "round", metal: "rose", dialColor: "#111733", texture: "aventurine", hands: "dauphine", markers: "roman", strap: "leather", accentColor: "#C5ADFF", complication: "daynight", bezel: "polished", lumeColor: "#D8C5FF", secondsMotion: "sweep" },
   },
   {
-    id: "flux", name: "FLUX", edition: "UNREAL / 01", category: "UNREAL · LIQUID TIME",
-    description: "Liquid light suspended in sapphire. A mirrored mesh bracelet. Time without a fixed state.",
-    design: { version: 1, family: "flux", caseShape: "round", metal: "sapphire", dialColor: "#091722", texture: "liquid", hands: "sword", markers: "minimal", strap: "mesh", accentColor: "#C1F1FF", complication: "none", bezel: "polished", caseFinish: "polished", crystalStyle: "domed", lumeColor: "#C1F1FF", secondsMotion: "sweep", atmosphere: { intensity: 65, density: 60, gravity: "float", color: "#9BE7FF", calm: false } },
+    id: "whiteout", name: "WHITEOUT", edition: "WHITEOUT / 01", category: "UNREAL · GLACIER",
+    description: "A private snowstorm beneath domed crystal. Brushed titanium, glacial light, and an ice-white strap.",
+    design: { version: 1, family: "whiteout", caseShape: "cushion", metal: "titanium", dialColor: "#152531", texture: "snow", hands: "sword", markers: "baton", strap: "rubber", strapColor: "#DCECF1", accentColor: "#BCEAFF", complication: "date", bezel: "polished", caseFinish: "brushed", crystalStyle: "domed", lumeColor: "#D9F6FF", secondsMotion: "sweep", atmosphere: { intensity: 65, density: 60, gravity: "down", color: "#9BE7FF", calm: false, scene: "glacier" } },
   },
   {
-    id: "whiteout", name: "WHITEOUT", edition: "UNREAL / 02", category: "UNREAL · SNOW FIELD",
-    description: "A private snowstorm beneath domed crystal. Brushed titanium, glacial light, and an ice-white strap.",
-    design: { version: 1, family: "whiteout", caseShape: "cushion", metal: "titanium", dialColor: "#152531", texture: "snow", hands: "sword", markers: "baton", strap: "rubber", strapColor: "#DCECF1", accentColor: "#BCEAFF", complication: "date", bezel: "polished", caseFinish: "brushed", crystalStyle: "domed", lumeColor: "#D9F6FF", secondsMotion: "sweep", atmosphere: { intensity: 65, density: 60, gravity: "down", color: "#9BE7FF", calm: false } },
+    id: "evergreen", name: "EVERGREEN", edition: "WHITEOUT / 02", category: "UNREAL · WINTER FOREST",
+    description: "Moonlit pines in an endless winter. Warm bronze frames a forest of layered green and drifting snow.",
+    design: { version: 1, family: "evergreen", caseShape: "round", metal: "bronze", dialColor: "#0D2622", texture: "snow", hands: "sword", markers: "minimal", strap: "sailcloth", strapColor: "#13372C", accentColor: "#D4E6BF", complication: "none", bezel: "coined", caseFinish: "brushed", crystalStyle: "domed", lumeColor: "#CEFFDE", secondsMotion: "sweep", atmosphere: { intensity: 45, density: 52, gravity: "down", color: "#AEEDD1", calm: false, scene: "forest" } },
+  },
+  {
+    id: "nightfall", name: "NIGHTFALL", edition: "WHITEOUT / 03", category: "UNREAL · MIDNIGHT CITY",
+    description: "The city after midnight. Lit windows, snow-covered rooftops and blue-hour steel beneath black ceramic.",
+    design: { version: 1, family: "nightfall", caseShape: "octagonal", metal: "ceramic", dialColor: "#11192E", texture: "snow", hands: "baton", markers: "minimal", strap: "bracelet", braceletStyle: "engineer", accentColor: "#BDD6FF", complication: "none", bezel: "polished", caseFinish: "polished", crystalStyle: "domed", lumeColor: "#A9D5FF", secondsMotion: "sweep", atmosphere: { intensity: 40, density: 43, gravity: "down", color: "#A9C9FF", calm: false, scene: "city" } },
+  },
+  {
+    id: "noel", name: "NOËL", edition: "WHITEOUT / 04", category: "UNREAL · CHRISTMAS VILLAGE",
+    description: "A golden tree. A village glowing after dark. Rose gold and oxblood leather hold Christmas under crystal.",
+    design: { version: 1, family: "noel", caseShape: "round", metal: "rose", dialColor: "#241C27", texture: "snow", hands: "dauphine", markers: "minimal", strap: "alligator", strapColor: "#602332", accentColor: "#FFE3B0", complication: "none", bezel: "fluted", caseFinish: "polished", crystalStyle: "domed", lumeColor: "#FFEBD0", secondsMotion: "sweep", atmosphere: { intensity: 35, density: 55, gravity: "down", color: "#FFE3B0", calm: false, scene: "christmas" } },
+  },
+  {
+    id: "borealis", name: "BOREALIS", edition: "WHITEOUT / 05", category: "UNREAL · NORTHERN LIGHTS",
+    description: "An aurora above the mountains. Sapphire, polar green and a sky that never stays the same.",
+    design: { version: 1, family: "borealis", caseShape: "cushion", metal: "sapphire", dialColor: "#0D2231", texture: "snow", hands: "sword", markers: "minimal", strap: "rubber", strapColor: "#193D40", accentColor: "#A3FFE1", complication: "none", bezel: "polished", caseFinish: "polished", crystalStyle: "domed", lumeColor: "#A3FFE1", secondsMotion: "sweep", atmosphere: { intensity: 55, density: 36, gravity: "float", color: "#A3FFE1", calm: false, scene: "aurora" } },
+  },
+  {
+    id: "starfall", name: "STARFALL", edition: "WHITEOUT / 06", category: "UNREAL · FROZEN OBSERVATORY",
+    description: "A remote observatory under an impossible sky. Platinum, violet starlight and winter at the edge of space.",
+    design: { version: 1, family: "starfall", caseShape: "round", metal: "platinum", dialColor: "#181B37", texture: "snow", hands: "dauphine", markers: "minimal", strap: "mesh", accentColor: "#D5C4FF", complication: "none", bezel: "polished", caseFinish: "brushed", crystalStyle: "domed", lumeColor: "#D8CAFF", secondsMotion: "sweep", atmosphere: { intensity: 30, density: 38, gravity: "down", color: "#CBB9FF", calm: false, scene: "observatory" } },
   },
 ];
 
@@ -259,6 +280,7 @@ export function isCompatibleDesign(design: WatchDesign): boolean {
 }
 
 export function normalizeDesign(design: WatchDesign): WatchDesign {
+  design = migrateLegacyUnrealDesign(design) as WatchDesign;
   const fallback = PRESETS.find((preset) => preset.id === design?.family)?.design ?? PRESETS[0].design;
   const pick = <T extends string>(value: T, choices: readonly T[], defaultValue: T): T => choices.includes(value) ? value : defaultValue;
   const normalized: WatchDesign = {
@@ -291,7 +313,11 @@ export function normalizeDesign(design: WatchDesign): WatchDesign {
   if (design?.lumeStyle !== undefined && (PARTS.lumeStyles as readonly string[]).includes(design.lumeStyle)) normalized.lumeStyle = design.lumeStyle;
   if (typeof design?.strapColor === "string" && /^#[a-f\d]{6}$/i.test(design.strapColor)) normalized.strapColor = design.strapColor;
   if (Array.isArray(design?.catalogReferences)) normalized.catalogReferences = [...new Set(design.catalogReferences.filter(isCatalogReference))].slice(0, MAX_CATALOG_REFERENCES);
-  if (design?.atmosphere !== undefined) normalized.atmosphere = getAtmosphere({ ...normalized, atmosphere: design.atmosphere });
+  if (design?.atmosphere !== undefined) {
+    normalized.atmosphere = getAtmosphere({ ...normalized, atmosphere: design.atmosphere });
+    // Preserve the old five-field representation; resolution supplies its family scene at render time.
+    if (design.atmosphere && typeof design.atmosphere === "object" && design.atmosphere.scene === undefined) delete normalized.atmosphere.scene;
+  }
   const active: ActiveComplication[] = [];
   // Selecting None clears the full layout. If only the case changed, preserve valid extras
   // and promote the first surviving function when the old primary no longer fits.

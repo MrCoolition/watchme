@@ -9,6 +9,7 @@ export const atmosphereSchema = z.object({
   gravity: z.enum(PARTS.atmosphereGravities),
   color: colorSchema.length(7),
   calm: z.boolean(),
+  scene: z.enum(PARTS.atmosphereScenes).optional(),
 }).strict();
 export const designSchema = z.object({
   version: z.literal(1), family: familySchema,

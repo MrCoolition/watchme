@@ -1,6 +1,6 @@
 import { getComplications, hasComplication } from "@/lib/presets";
 import type { ActiveComplication, WatchDesign } from "@/lib/types";
-import { getAtmosphere, isUnrealFamily, isUnrealTexture } from "@/lib/unreal";
+import { getAtmosphere, isUnrealFamily, isUnrealTexture, WHITEOUT_SCENES } from "@/lib/unreal";
 
 export interface EditionReference {
   id: string;
@@ -73,7 +73,7 @@ const TEXTURES: Record<WatchDesign["texture"], string> = {
   carbon: "Carbon weave", meteorite: "Meteorite", guilloche: "Guilloché", mechanical: "Mechanical layers", turbine: "Sculpted turbine",
   solar: "Solar sculpture", abyssal: "Abyssal contours", prismatic: "Iridescent facets", aventurine: "Aventurine sky",
   motherofpearl: "Mother-of-pearl", malachite: "Malachite", lapis: "Lapis lazuli", marble: "Marble", linen: "Linen weave",
-  honeycomb: "Honeycomb", wave: "Wave relief", fume: "Fumé gradient", enamel: "Enamel", sand: "Sand grain", liquid: "Liquid atmosphere", snow: "Snow atmosphere",
+  honeycomb: "Honeycomb", wave: "Wave relief", fume: "Fumé gradient", enamel: "Enamel", sand: "Sand grain", snow: "Snow atmosphere",
 };
 const SHAPES: Record<WatchDesign["caseShape"], string> = { octagonal: "Octagonal", cushion: "Cushion", tonneau: "Tonneau", round: "Round", square: "Square", rectangle: "Rectangular", hexagonal: "Hexagonal", oval: "Oval", shield: "Shield" };
 const FINISHES: Record<NonNullable<WatchDesign["caseFinish"]>, string> = { polished: "Polished", brushed: "Brushed", blasted: "Blasted", hammered: "Hammered", damascus: "Damascus pattern" };
@@ -111,8 +111,10 @@ export function getEditionAtmosphereDetails(design: WatchDesign): EditionDetailS
   const active = isUnrealTexture(design.texture);
   const gravity = { down: "Downward", float: "Floating", up: "Upward" } as const;
   const inactive = "Saved / inactive on the selected dial texture.";
+  const scene = WHITEOUT_SCENES.find(item => item.id === atmosphere.scene)!;
   return { id: "atmosphere", title: "Atmosphere", rows: [
-    { label: "Display", value: active ? design.texture === "liquid" ? "Liquid atmosphere" : "Snow atmosphere" : "Inactive", note: active ? "Digital material in motion beneath the hands." : "Choose a liquid or snow texture to use these settings." },
+    { label: "Display", value: active ? "Snow atmosphere" : "Inactive", note: active ? "A miniature winter world beneath the hands." : "Choose a snow texture to use these settings." },
+    { label: "Scene", value: scene.name, note: active ? scene.description : inactive },
     { label: "Intensity", value: `${atmosphere.intensity}%`, note: active ? "Strength of the atmosphere's motion." : inactive },
     { label: "Density", value: `${atmosphere.density}%`, note: active ? "Amount of visible material in the dial." : inactive },
     { label: "Gravity", value: gravity[atmosphere.gravity], note: active ? "Direction of the digital atmosphere." : inactive },

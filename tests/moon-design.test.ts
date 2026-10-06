@@ -4,7 +4,7 @@ import { designSchema, watchInputSchema } from "../src/lib/validation";
 
 describe("saved moon-phase complications", () => {
   it("fits every case and round-trips on each existing watch without creating new presets", () => {
-    expect(PRESETS).toHaveLength(14);
+    expect(PRESETS).toHaveLength(18);
     for (const preset of PRESETS) {
       const design = { ...preset.design, complication: "moonphase" as const, initials: "WM", signature: "LUNAR EDITION" };
       expect(isComplicationCompatible(design.caseShape, design.complication)).toBe(true);

@@ -10,6 +10,7 @@ import { verifyPassword } from "@/lib/password";
 import { watches, preferences as preferencesTable } from "@/lib/schema";
 import { designSchema, familySchema, preferencesSchema, watchInputSchema } from "@/lib/validation";
 import { DEFAULT_PREFERENCES, type ActionResult, type Preferences, type SavedWatch, type StudioData, type WatchDesign } from "@/lib/types";
+import { migrateLegacyUnrealDesign, migrateLegacyUnrealPreferences } from "@/lib/unreal";
 
 function actionError<T>(error: unknown): ActionResult<T> {
   if (error instanceof AuthError || error instanceof SetupRequiredError) return { ok: false, error: error.message };
@@ -19,7 +20,7 @@ function actionError<T>(error: unknown): ActionResult<T> {
   return { ok: false, error: "Your studio could not reach its database. Your draft is still on this device. Try again shortly." };
 }
 function toWatch(row: typeof watches.$inferSelect): SavedWatch {
-  return { ...row, design: designSchema.parse(row.design), createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
+  return { ...row, design: designSchema.parse(migrateLegacyUnrealDesign(row.design)), createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
 }
 
 export async function loadStudio(): Promise<ActionResult<StudioData>> {
@@ -27,7 +28,7 @@ export async function loadStudio(): Promise<ActionResult<StudioData>> {
     await requireSession();
     const db = getDb();
     const [rows, settings] = await Promise.all([db.select().from(watches).orderBy(desc(watches.updatedAt)), db.select().from(preferencesTable).where(eq(preferencesTable.id, 1)).limit(1)]);
-    const preferences = settings[0] ? preferencesSchema.parse(settings[0].value) : { ...DEFAULT_PREFERENCES };
+    const preferences = settings[0] ? preferencesSchema.parse(migrateLegacyUnrealPreferences(settings[0].value)) : { ...DEFAULT_PREFERENCES };
     if (!familySchema.safeParse(preferences.activeWatchId).success && !rows.some((watch) => watch.id === preferences.activeWatchId)) preferences.activeWatchId = "monolith";
     return { ok: true, data: { watches: rows.map(toWatch), preferences } };
   } catch (error) { return actionError(error); }

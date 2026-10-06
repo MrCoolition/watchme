@@ -1,7 +1,7 @@
-export type WatchFamily = "monolith" | "pelagic" | "apex" | "vesper" | "meridian" | "orbit" | "reactor" | "phantom" | "helios" | "abyss" | "prism" | "nocturne" | "flux" | "whiteout";
+export type WatchFamily = "monolith" | "pelagic" | "apex" | "vesper" | "meridian" | "orbit" | "reactor" | "phantom" | "helios" | "abyss" | "prism" | "nocturne" | "whiteout" | "evergreen" | "nightfall" | "noel" | "borealis" | "starfall";
 export type CaseShape = "octagonal" | "cushion" | "tonneau" | "round" | "square" | "rectangle" | "hexagonal" | "oval" | "shield";
 export type Metal = "steel" | "titanium" | "gold" | "rose" | "graphite" | "ceramic" | "bronze" | "platinum" | "silver" | "whitegold" | "carbon" | "sapphire";
-export type DialTexture = "grid" | "horizontal" | "sunburst" | "lacquer" | "skeleton" | "carbon" | "meteorite" | "guilloche" | "mechanical" | "turbine" | "solar" | "abyssal" | "prismatic" | "aventurine" | "motherofpearl" | "malachite" | "lapis" | "marble" | "linen" | "honeycomb" | "wave" | "fume" | "enamel" | "sand" | "liquid" | "snow";
+export type DialTexture = "grid" | "horizontal" | "sunburst" | "lacquer" | "skeleton" | "carbon" | "meteorite" | "guilloche" | "mechanical" | "turbine" | "solar" | "abyssal" | "prismatic" | "aventurine" | "motherofpearl" | "malachite" | "lapis" | "marble" | "linen" | "honeycomb" | "wave" | "fume" | "enamel" | "sand" | "snow";
 export type Bezel = "polished" | "fluted" | "iced" | "ceramic" | "coined" | "scalloped" | "screws";
 export type SecondsMotion = "sweep" | "tick" | "stepped";
 export type SecondsIndication = "running" | "chronograph" | "none";
@@ -19,12 +19,15 @@ export type CrystalStyle = "clear" | "domed" | "smoked" | "faceted";
 export type LumeStyle = "standard" | "full-dial" | "hands-only" | "none";
 export type Complication = "date" | "gmt" | "chronograph" | "weather" | "regulator" | "daynight" | "moonphase" | "daydate" | "calendar" | "none";
 export type ActiveComplication = Exclude<Complication, "none">;
+export type WhiteoutScene = "glacier" | "forest" | "city" | "christmas" | "aurora" | "observatory";
 export interface Atmosphere {
   intensity: number;
   density: number;
   gravity: "down" | "float" | "up";
   color: string;
   calm: boolean;
+  /** Optional for earlier v1 watches; their family supplies the original scene. */
+  scene?: WhiteoutScene;
 }
 export interface WatchDesign {
   version: 1;

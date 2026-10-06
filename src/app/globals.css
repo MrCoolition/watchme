@@ -494,7 +494,7 @@
   .edition-pack-contents { display: none; }
   .edition-download-actions { margin-top: 20px; }
 }
-/* UNREAL keeps its living dial and atmosphere controls in one calm, legible frame. */
+/* WHITEOUT keeps its living snow worlds and atmosphere controls in one legible frame. */
 .unreal-discovery { display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:68px; padding:10px 37px; border-bottom:1px solid #a0e8e41f; background:radial-gradient(ellipse at 20% 100%,#46d2c31b,transparent 65%),#0d1717; }
 .unreal-discovery-intro { display:flex; align-items:center; gap:19px; min-width:0; }
 .unreal-discovery-intro > span { color:#77aaa5; font-size:7px; letter-spacing:1.7px; white-space:nowrap; }
@@ -538,7 +538,7 @@
 .dialog:has(.unreal-console) { width:min(890px,calc(100vw - 40px)); max-width:none; padding:28px; background:#111c1b; border-color:#9ed6c833; }
 .dialog:has(.unreal-console) .dialog-header .eyebrow { color:#96cabc; letter-spacing:1.8px; }
 .unreal-console { display:grid; grid-template-columns:minmax(0,1fr) minmax(290px,1fr); gap:33px; min-width:0; }
-.unreal-console-preview { display:flex; flex-direction:column; min-width:0; align-self:start; border:1px solid #a3dedb1c; border-radius:8px; overflow:hidden; background:radial-gradient(ellipse at 50% 41%,color-mix(in srgb,var(--atmosphere-color),transparent 88%),transparent 65%),#091211; }
+.unreal-console-preview { display:flex; flex-direction:column; min-width:0; align-self:start; position:sticky; top:0; border:1px solid #a3dedb1c; border-radius:8px; overflow:hidden; background:radial-gradient(ellipse at 50% 41%,color-mix(in srgb,var(--atmosphere-color),transparent 88%),transparent 65%),#091211; }
 .unreal-preview-label { display:flex; justify-content:space-between; align-items:center; padding:19px 20px 0; }
 .unreal-preview-label > span { color:#789a90; font-size:7px; letter-spacing:1.5px; }
 .unreal-preview-label > i { width:5px; height:5px; border-radius:50%; background:var(--atmosphere-color); box-shadow:0 0 9px color-mix(in srgb,var(--atmosphere-color),transparent 60%); }
@@ -553,12 +553,22 @@
 .unreal-history > span { color:#829f91; font-size:9px; }
 .unreal-history > button { width:44px; height:44px; color:#9ac2ad; }
 .unreal-console-controls { display:grid; gap:18px; min-width:0; }
-.unreal-medium { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
-.unreal-medium > button { display:flex; align-items:center; gap:10px; text-align:left; min-height:65px; padding:11px 12px; border:1px solid #a3caba20; border-radius:6px; color:#8faf9f; background:#0e1613; }
-.unreal-medium > button > span { font-size:13px; }
-.unreal-medium small { display:block; margin-top:5px; font-size:9px; color:#607e6e; }
-.unreal-medium > button[aria-pressed=true] { background:#a7ead011; border-color:#a7ead04a; color:#ccefdc; }
-.unreal-medium > button[aria-pressed=true] small { color:#8cb59c; }
+.whiteout-worlds { min-width:0; }
+.whiteout-worlds-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; color:#AEC6C9; font-size:8px; letter-spacing:1.4px; }
+.whiteout-worlds-heading > span:last-child { color:#89A2AC; font-size:7px; letter-spacing:1px; }
+.whiteout-scene-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; min-width:0; }
+.whiteout-scene-card { position:relative; display:flex; flex-direction:column; min-width:0; min-height:155px; padding:0 0 12px; overflow:hidden; text-align:left; border:1px solid #9DC5D024; border-radius:7px; background:#0C1720; transition:border-color .18s,background .18s; touch-action:pan-y; }
+.whiteout-scene-card:hover { border-color:color-mix(in srgb,var(--scene-color),transparent 48%); background:#14222C; }
+.whiteout-scene-card:focus-visible { outline:2px solid #D2F1FC; outline-offset:3px; }
+.whiteout-scene-card[aria-pressed=true] { border-color:color-mix(in srgb,var(--scene-color),transparent 22%); background:linear-gradient(135deg,color-mix(in srgb,var(--scene-color),transparent 89%),transparent),#111E26; box-shadow:0 0 0 1px color-mix(in srgb,var(--scene-color),transparent 88%) inset; }
+.whiteout-scene-art { display:block; flex:none; width:100%; height:auto; aspect-ratio:220/96; border-bottom:1px solid #D5EFF311; }
+.whiteout-scene-heading { display:flex; align-items:center; gap:7px; margin:11px 11px 6px; color:var(--scene-color); min-width:0; }
+.whiteout-scene-heading > strong { min-width:0; color:#E0ECEE; font-size:12px; font-weight:500; letter-spacing:.1px; overflow-wrap:anywhere; }
+.whiteout-scene-heading > svg { flex-shrink:0; }
+.whiteout-scene-heading > i { position:absolute; top:8px; right:8px; display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; color:#D0E2EA; background:#091725CC; font-style:normal; }
+.whiteout-scene-card[aria-pressed=true] .whiteout-scene-heading > i { border-radius:50%; background:var(--scene-color); color:#071319; }
+.whiteout-scene-description { display:block; margin:0 11px; color:#A4B8C2; font-size:10px; line-height:1.55; overflow-wrap:anywhere; }
+.whiteout-scene-current { margin-top:11px; font-size:10px; color:#A3C1CB; line-height:1.6; }
 .atmosphere-range { display:grid; gap:0; min-width:0; }
 .atmosphere-range > span { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:#c4d4c8; }
 .atmosphere-range strong { font-size:15px; color:#b3deca; font-weight:400; font-variant-numeric:tabular-nums; }
@@ -619,13 +629,15 @@
   .is-unreal .focus-header .eyebrow { font-size:7px; letter-spacing:1.7px; }
   .dialog:has(.unreal-console) { width:calc(100vw - 20px); padding:23px 19px; max-height:calc(100dvh - 20px); }
   .unreal-console { grid-template-columns:1fr; gap:21px; }
-  .unreal-console-preview { display:grid; grid-template-columns:minmax(125px,1fr) minmax(100px,.85fr); }
+  .unreal-console-preview { display:grid; grid-template-columns:minmax(125px,1fr) minmax(100px,.85fr); position:static; }
   .unreal-preview-label { grid-column:1/-1; padding:15px 15px 0; }.unreal-preview-label > span { font-size:6px; letter-spacing:1.25px; }
   .unreal-preview-watch { grid-column:1; grid-row:2; padding:0; }
   .unreal-preview-caption { grid-column:2; grid-row:2; text-align:left; align-self:center; padding:12px 13px 12px 3px; }
   .unreal-preview-caption > h3 { font-size:19px; letter-spacing:.8px; }.unreal-preview-caption > p { font-size:10px; line-height:1.7; margin-top:9px; }.unreal-preview-caption > span { font-size:5px; letter-spacing:.65px; line-height:1.8; margin-top:9px; }
   .unreal-history { grid-column:1/-1; padding:3px 9px; }.unreal-history > span { font-size:10px; }
-  .unreal-console-controls { gap:19px; }.unreal-medium > button { min-height:65px; }.unreal-medium > button > span { font-size:14px; }.unreal-medium small { font-size:10px; }
+  .unreal-console-controls { gap:19px; }
+  .whiteout-worlds-heading { font-size:9px; letter-spacing:1.2px; }.whiteout-worlds-heading > span:last-child { font-size:8px; }
+  .whiteout-scene-grid { gap:10px; }.whiteout-scene-card { min-height:153px; }.whiteout-scene-description { font-size:11px; }.whiteout-scene-current { font-size:11px; }
   .atmosphere-range > span,.atmosphere-color > label { font-size:13px; }.atmosphere-range > small { font-size:11px; }
   .atmosphere-color input { width:44px; height:44px; min-height:44px; }.atmosphere-color button { width:44px; height:44px; border-width:9px; }.atmosphere-color > div { gap:9px; }
   .atmosphere-gravity .select-label { font-size:12px; }.atmosphere-gravity select { font-size:13px; }

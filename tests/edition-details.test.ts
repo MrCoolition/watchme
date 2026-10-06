@@ -65,7 +65,7 @@ describe("complete edition details", () => {
     }
     expect(row({ ...base, texture: "prismatic" }, "Dial color").note).toContain("Tint");
     expect(row({ ...base, texture: "mechanical" }, "Dial color").note).toContain("own palette");
-    for (const texture of ["liquid", "snow"] as const) {
+    for (const texture of ["snow"] as const) {
       expect(row({ ...base, texture, dialColor: "#ff0000" }, "Dial color")).toMatchObject({
         value: "#FF0000", color: "#FF0000", note: "Saved / inactive on the main dial; used when counters are present.",
       });

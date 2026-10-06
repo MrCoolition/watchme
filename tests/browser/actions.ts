@@ -1,11 +1,15 @@
 // UI fixture doubles only. Production keeps its real authenticated Neon server actions.
 import { DEFAULT_PREFERENCES, type ActionResult, type Preferences, type SavedWatch, type StudioData, type WatchDesign } from "../../src/lib/types";
 import { watchInputSchema, preferencesSchema } from "../../src/lib/validation";
+import { migrateLegacyUnrealDesign, migrateLegacyUnrealPreferences } from "../../src/lib/unreal";
 
 const STORAGE_KEY = "watchme.fixture.studio.v1";
 export function readFixture(): StudioData {
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) return JSON.parse(saved) as StudioData;
+  if (saved) {
+    const data = JSON.parse(saved) as StudioData;
+    return { watches: data.watches.map(watch => ({ ...watch, design: migrateLegacyUnrealDesign(watch.design) as WatchDesign })), preferences: migrateLegacyUnrealPreferences(data.preferences) as Preferences };
+  }
   const data: StudioData = { watches: [], preferences: { ...DEFAULT_PREFERENCES, primaryTimezone: "America/New_York", location: new URLSearchParams(location.search).has("weather") ? { name: "New York", latitude: 40.7128, longitude: -74.006, timezone: "America/New_York", country: "United States" } : null } };
   writeFixture(data);
   return data;

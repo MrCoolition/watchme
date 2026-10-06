@@ -13,7 +13,7 @@ const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1050 } });
 context.setDefaultTimeout(20000);
 const page = await context.newPage();
-const name = `UNREAL verification ${randomUUID().slice(0, 8)}`;
+const name = `WHITEOUT verification ${randomUUID().slice(0, 8)}`;
 let originalSelection, originalSaved = false, stage = 'opening deployment';
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
@@ -23,15 +23,20 @@ try {
   await page.goto(config.url, { waitUntil: 'networkidle' });
   originalSelection = await page.locator('.watch-card-main[aria-pressed="true"]').first().getAttribute('aria-label');
   originalSaved = (await page.getByRole('button', { name: /My creations/ }).getAttribute('class'))?.includes('selected') || false;
-  stage = 'customizing UNREAL';
-  await page.getByRole('button', { name: 'UNREAL', exact: true }).click();
-  assert.equal(await page.locator('.watch-card-main').count(), 2);
-  await page.getByRole('button', { name: 'Select WHITEOUT', exact: true }).click();
-  await page.locator('.watch-stage [data-unreal-layer="snow"]').waitFor();
-  await page.getByRole('button', { name: 'Select FLUX', exact: true }).click();
+  stage = 'customizing WHITEOUT';
+  await page.getByRole('button', { name: 'WHITEOUT', exact: true }).click();
+  assert.equal(await page.locator('.watch-card-main').count(), 6);
+  assert.equal(await page.getByRole('button', { name: 'Select FLUX', exact: true }).count(), 0);
+  for (const [edition, scene] of [['WHITEOUT', 'glacier'], ['EVERGREEN', 'forest'], ['NIGHTFALL', 'city'], ['BOREALIS', 'aurora'], ['STARFALL', 'observatory'], ['NOËL', 'christmas']]) {
+    await page.getByRole('button', { name: `Select ${edition}`, exact: true }).click();
+    await page.locator(`.watch-stage [data-whiteout-scene="${scene}"]`).waitFor();
+  }
   const face = page.locator('.watch-stage > svg');
   await face.press('ArrowRight');
   await page.getByRole('button', { name: 'Atmosphere', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Forest scene', exact: true }).click();
+  await page.getByRole('button', { name: 'Christmas scene', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: 'Liquid atmosphere', exact: true }).count(), 0);
   await page.getByLabel('Atmosphere intensity', { exact: true }).press('End');
   await page.getByLabel('Atmosphere density', { exact: true }).press('Home');
   await page.getByLabel('Atmosphere color', { exact: true }).fill('#BD88FF');
@@ -58,6 +63,7 @@ try {
     assert.equal(await second.getByLabel('Atmosphere gravity', { exact: true }).inputValue(), 'up');
     assert.equal(await second.getByLabel('Atmosphere color', { exact: true }).inputValue(), '#bd88ff');
     assert.equal(await second.getByRole('button', { name: 'Calm mode', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await second.getByRole('button', { name: 'Christmas scene', exact: true }).getAttribute('aria-pressed'), 'true');
     await second.getByRole('button', { name: 'Close dialog', exact: true }).click();
     await second.getByRole('button', { name: 'Front & center', exact: true }).click();
     await second.locator('.watch-stage > svg').press('Space');
@@ -81,13 +87,14 @@ try {
     }
     assert.equal(files.size, 4);
     const manifest = JSON.parse(files.get('design.json').toString('utf8'));
-    assert.equal(manifest.design.family, 'flux');
-    assert.deepEqual(manifest.design.atmosphere, { intensity: 100, density: 0, gravity: 'up', color: '#bd88ff', calm: true });
-    assert.equal(manifest.presentation.environment.texture, 'liquid');
+    assert.equal(manifest.design.family, 'noel');
+    assert.deepEqual(manifest.design.atmosphere, { intensity: 100, density: 0, gravity: 'up', color: '#bd88ff', calm: true, scene: 'christmas' });
+    assert.equal(manifest.presentation.environment.texture, 'snow');
+    assert.equal(manifest.presentation.environment.scene, 'christmas');
     assert.ok(Number(manifest.presentation.environment.interactions) > 0);
     await zip.saveAs(`.setup/${config.schema}-unreal-collector.zip`);
     assert.deepEqual(errors, []);
-    console.log(`PASS: ${config.schema} UNREAL liquid/snow, atmosphere controls, Neon save/reopen in a second browser, phone focus, interacted snapshot, Atmosphere PNG and complete ZIP.`);
+    console.log(`PASS: ${config.schema} six WHITEOUT scenes, FLUX removed, scene controls, Neon save/reopen in a second browser, phone focus, interacted snapshot, Atmosphere PNG and complete ZIP.`);
   } finally { await other.close(); }
 } catch (error) {
   console.error(`UNREAL verification failed during: ${stage}`);

@@ -53,7 +53,7 @@ export function editionFilename(name: string, design: WatchDesign, page?: Editio
 }
 
 const METALS: Record<WatchDesign["metal"], string> = { steel: "Stainless steel", titanium: "Titanium", gold: "Gold tone", rose: "Rose gold tone", graphite: "Graphite", ceramic: "Black ceramic", bronze: "Bronze tone", platinum: "Platinum tone", silver: "Silver tone", whitegold: "White gold tone", carbon: "Carbon composite", sapphire: "Sapphire crystal" };
-const TEXTURES: Record<WatchDesign["texture"], string> = { grid: "Clous de Paris", horizontal: "Horizontal relief", sunburst: "Sunburst", lacquer: "Lacquer", skeleton: "Open architecture", carbon: "Carbon weave", meteorite: "Meteorite", guilloche: "Guilloché", mechanical: "Mechanical layers", turbine: "Sculpted turbine", solar: "Solar sculpture", abyssal: "Abyssal contours", prismatic: "Iridescent facets", aventurine: "Aventurine sky", motherofpearl: "Mother-of-pearl", malachite: "Malachite", lapis: "Lapis lazuli", marble: "Marble", linen: "Linen weave", honeycomb: "Honeycomb", wave: "Wave relief", fume: "Fumé gradient", enamel: "Enamel", sand: "Sand grain", liquid: "Liquid atmosphere", snow: "Snow atmosphere" };
+const TEXTURES: Record<WatchDesign["texture"], string> = { grid: "Clous de Paris", horizontal: "Horizontal relief", sunburst: "Sunburst", lacquer: "Lacquer", skeleton: "Open architecture", carbon: "Carbon weave", meteorite: "Meteorite", guilloche: "Guilloché", mechanical: "Mechanical layers", turbine: "Sculpted turbine", solar: "Solar sculpture", abyssal: "Abyssal contours", prismatic: "Iridescent facets", aventurine: "Aventurine sky", motherofpearl: "Mother-of-pearl", malachite: "Malachite", lapis: "Lapis lazuli", marble: "Marble", linen: "Linen weave", honeycomb: "Honeycomb", wave: "Wave relief", fume: "Fumé gradient", enamel: "Enamel", sand: "Sand grain", snow: "Snow atmosphere" };
 const CASES: Record<WatchDesign["caseShape"], string> = { octagonal: "Octagonal", cushion: "Cushion", tonneau: "Tonneau", round: "Round", square: "Square", rectangle: "Rectangular", hexagonal: "Hexagonal", oval: "Oval", shield: "Shield" };
 const FINISHES: Record<NonNullable<WatchDesign["caseFinish"]>, string> = { polished: "Polished", brushed: "Brushed", blasted: "Blasted", hammered: "Hammered", damascus: "Damascus pattern" };
 const BEZELS: Record<NonNullable<WatchDesign["bezel"]>, string> = { polished: "Polished", fluted: "Fluted", iced: "Iced", ceramic: "Ceramic", coined: "Coin-edge", scalloped: "Scalloped", screws: "Exposed screws" };
@@ -273,7 +273,7 @@ function atmospherePage(artwork: EditionCardArtwork, accent: string): string {
     ${linesSvg(wrap(visibleText(artwork.name) || "Untitled", 950, 20), 65, 251, 20, 24, CARD.text)}
     <path d="M64 302H1016" stroke="url(#edition-rule)"/>
     <g data-edition-section="atmosphere">${section.rows.map((row, index) => {
-      const y = 342 + index * 132;
+      const y = 332 + index * 116;
       return `<g data-edition-field="${escapeXml(row.label)}">
         ${label(`${String(index + 1).padStart(2, "0")} / ${row.label}`, 65, y, accent, 9)}
         ${row.color ? `<circle cx="77" cy="${y + 28}" r="11" fill="${color(row.color, "#9BE7FF")}" stroke="${CARD.text}" stroke-opacity=".6"/>` : ""}

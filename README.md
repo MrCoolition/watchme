@@ -1,6 +1,6 @@
 # WATCHMÉ
 
-A private, dial-first watch collection and design studio. Twelve original live watches, curated customization, saved collections, chronograph, countdown, dual time, weather, and a distraction-free display.
+A private, dial-first watch collection and design studio. Eighteen original live watches, curated customization, saved collections, chronograph, countdown, dual time, weather, and a distraction-free display.
 
 ## Parts catalog
 
@@ -30,13 +30,13 @@ Five flagships join REACTOR, each with its own layered dial artwork and function
 
 Use the Black Label collection filter to find all six flagships. Each supports Eclipse, interactive lighting, engraving, saved personal editions, and PNG edition cards. New textures are also available in the design studio. NOCTURNE's display follows civil time (day from 06:00 to 18:00); it does not estimate sunrise, sunset, or lunar phase.
 
-## UNREAL / FLUX & WHITEOUT
+## UNREAL / the WHITEOUT worlds
 
-Open **Discover UNREAL** or the **UNREAL** collection filter for the first two impossible editions. **FLUX** contains sculpted liquid chrome pools and floating droplets; **WHITEOUT** contains layered snowfall, frost and a glacier bank. Drag horizontally across the dial to disturb its atmosphere, or focus it and use arrow keys or Space. Vertical touch gestures still scroll the studio.
+Open **Discover WHITEOUT** or the **WHITEOUT** collection filter for six miniature winter worlds. **WHITEOUT** keeps the glacier; **EVERGREEN** adds a moonlit forest, **NIGHTFALL** a glowing city, **NOËL** a Christmas village, **BOREALIS** the northern lights, and **STARFALL** a snowy observatory beneath distant stars. Each has its own case, material, strap and palette. Drag horizontally across the dial to stir the snow, or focus it and use arrow keys or Space. Vertical touch gestures still scroll the studio.
 
-**Atmosphere** opens a live editor for intensity, density, color, gravity and Calm mode. Switch between Liquid and Snow, undo or redo changes, and use **Save creation** to persist them with the watch. These settings also participate in local draft recovery. Calm and reduced-motion settings stop automatic environmental motion while still allowing explicit interaction; hands keep accurate time. Animations pause when hidden or offscreen, and collection previews remain still.
+**Atmosphere** opens a live editor for scene, intensity, density, color, gravity and Calm mode. Switch among Glacier, Forest, City, Christmas, Aurora and Observatory, undo or redo changes, and use **Save creation** to persist them with the watch. These settings also participate in local draft recovery. Calm and reduced-motion settings stop automatic environmental motion while still allowing explicit interaction; hands keep accurate time. Animations pause when hidden or offscreen, and collection previews remain still.
 
-Edition exports copy the currently interacted atmosphere into the full-watch portrait. An additional **Atmosphere** card documents the settings, and the complete ZIP preserves them in the design file. Liquid and snow are also available as dial textures for other designs. Existing saved watches retain their original behavior; no database migration is required.
+Edition exports copy the currently interacted scene into the full-watch portrait. An additional **Atmosphere** card documents the selected world and settings, and the complete ZIP preserves them in the design file. Snow is available as a dial texture on any design. FLUX and liquid are retired: existing saved liquid designs and local drafts reopen as snow, retaining their names, customized parts and atmosphere controls. Retired FLUX active/favorite selections resolve to WHITEOUT. This is an additive read migration; no database records are deleted and no schema migration is required. Earlier WHITEOUT configurations without a scene retain Glacier automatically.
 
 ## Moon phase and focus controls
 
